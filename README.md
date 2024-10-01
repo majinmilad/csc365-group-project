@@ -2,6 +2,8 @@
 Repository for the Potion Shop group project in CSC 365 at Cal Poly  
 
 Members: Jackson, Edson, Megan and Milad
+CP Emails: 
+- mfung06@calpoly.edu
 
 ## Style Guide
 ### Git
