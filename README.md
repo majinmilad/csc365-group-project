@@ -1,7 +1,7 @@
 # csc365-group-project
 Repository for the group project in CSC 365 at Cal Poly  
 
-Members: Jackson, Edson, Megan and Milad 
+Members: Jackson McLaughlin, Edson Munoz, Megan Fung and Milad Chabok
 - jdmclaug@calpoly.edu
 - emunoz23@calpoly.edu
 - mfung06@calpoly.edu
