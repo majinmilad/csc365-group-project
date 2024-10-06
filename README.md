@@ -14,8 +14,8 @@ The Playlist Exchanger is a platform where users can upload and share playlists 
 ### Git
 #### Quick Summary
 - Make commit messages clear, concise and in the present tense
-- Use commit descriptions if necessary to provide futher detail on the commit's changes and the state of the code after said commit
-- Branches should be heavily utilized to divide / delegate work and seperate stable code versions vs work-in-progress versions
+- Use commit descriptions if necessary to provide futher detail on the commit's changes or the state of the code
+- Branches should be heavily utilized to divide / delegate work and seperate stable code versions from work-in-progress versions
 #### Commits
 > [!NOTE]
 > Make commit messages clear but concise and ***in the present tense***.  
