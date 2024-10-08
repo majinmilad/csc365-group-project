@@ -24,6 +24,7 @@ User Stories
 - Privacy Control Settings
 - Rank playlists based off how often it is listened to by the user
 - Rank playlist based on how liked it is collectively
+
 Exceptions
 - How to handle if Spotify and Apple Music playlists don’t line up
 - How to handle if a playlist is deleted
