@@ -28,26 +28,37 @@ User Stories
 
 Exception: Mismatch in playlists
   If playlists don't match up on platforms an error flag will be raised
+
 Exception: A playlist is deleted
   If a user wants to remove a playlist they will be asked what apps to remove it on
+
 Exception: User has no data on account
   User will be prompted to enter data
+
 Exception: Same artists between platforms do not match
   Error will be raised; Some margin of error between artists names will be allowed
+
 Exception: Songs don't exist on both platforms
   Error wiil be raised and user will be asked if they still want to add the song
+
 Exception: Artists removes a song from discography
   Song will be grayed out and user will be prompted to remove or keep the song
+
 Exception: Artist no longer exists
   Music will be grayed out and user will be prompted to remove or keep the song
+
 Exception: What if songs are different between platforms
   A margin of error will be allowed between songs
+
 Exception: User wants to create playlist on platform
   This is up in the air at the moment
+
 Exception: Playlist is updated on either platform
   Users with playlist added will be promped to accept the updates or not (branch the playlist?)
+
 Exception: Playlist is made private
   The user with the playlist updated will no longer recieve updates if the playlist is updated
+
 Exception: User tries to add the same playlist twice
   The user will be asked if he want to overwrite current playlist
 
