@@ -6,8 +6,13 @@ Endpoint documentation (at least 8 and mixture of read/ write endpoints)
 GET/users/{id}/playlists → retrieve all playlists associated with a user 
   - Parameters: id (unique identifier of user)
   - Response: 
-  - [ {“playlist_id”: integer, “title”: “string”, “number_of_tracks”: integer} ]
-    
+    [ {“playlist_id”: integer, “title”: “string”, “number_of_tracks”: integer} ]
+
+GET/users/{id}/playlists/{id} → retrieve a single unique playlist(could also be GET/playlist{id}) if we have unique id’s for every playlist)
+  - Parameters:user id( unique identifier of user) playlistid(unique identifier of playlist)
+  - Response:
+    [{“playlist_id”: integer, “title”: “string”, “artist”: “string”}]
+
 POST/playlists/merge → merge a list of playlists into a single playlist
   - Request: {“playlist_ids”: []}
   - Response: 
