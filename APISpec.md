@@ -1,6 +1,6 @@
-#CSC 365 Group Project: Technical Specification
+# CSC 365 Group Project: Technical Specification
 
-##API Specification– Provide in APISpec.md
+## API Specification– Provide in APISpec.md
 Endpoint documentation (at least 8 and mixture of read/ write endpoints)
   
 GET/users/{id}/playlists → retrieve all playlists associated with a user 
