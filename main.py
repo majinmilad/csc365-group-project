@@ -28,32 +28,18 @@ def create_playlist(user_id: int, playlist_name: str = None):
     with engine.begin() as connection:
 
         # insert a new playlist into table
-        sql_to_execute = 'INSERT INTO playlist (user_id) VALUES (:user_id)'
-        connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id})
+        sql_to_execute = 'INSERT INTO playlist (user_id) VALUES (:user_id) RETURNING playlist_id'
+        result = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id})
 
-        sql_to_execute = "INSERT INTO public.user (first_name) VALUES ('fuck off')"
-        connection.execute(sqlalchemy.text(sql_to_execute))
+        playlist_id = result.scalar()
 
-        
-    
         # update the playlist with a name if one was provided
-    
-    # return playlist_id ???
+        if playlist_name is not None:
+            sql_to_execute = 'UPDATE playlist SET playlist_name = :playlist_name WHERE playlist_id = :playlist_id'
+            connection.execute(sqlalchemy.text(sql_to_execute), {'playlist_name': playlist_name, 'playlist_id': playlist_id})
 
-    pass
+    return playlist_id
 
-def test():
-
-    print('fuck')
-
-    # Test the connection
-    with engine.connect() as connection:
-        # sql_to_execute = "select first_name from public.user"
-
-        # sql_to_execute = "INSERT INTO public.user (first_name) values ('whatup')"
-        # connection.execute(sqlalchemy.text(sql_to_execute))
-
-        print("Done connecting with the Supabase database!")
 
 if __name__=="__main__":
-    create_playlist(9)
+    create_playlist(user_id=24, playlist_name='dope ass playlist')
