@@ -9,9 +9,11 @@ DATABASE_URL = "postgresql://postgres.nqueeijmuxlkmckrcxst:weresocookedbro@aws-0
 
 engine = create_engine(DATABASE_URL)
 
+
 @app.get("/")
 async def root():
     return {"message": "Changing this message! Whoo!"}
+
 
 @app.post("/user/{user_id}/playlist/create_playlist")
 def create_playlist(user_id: int, playlist_name: str = None):
@@ -30,6 +32,7 @@ def create_playlist(user_id: int, playlist_name: str = None):
             connection.execute(sqlalchemy.text(sql_to_execute), {'playlist_name': playlist_name, 'playlist_id': playlist_id})
 
     return playlist_id
+
 
 @app.post("/user/{user_id}/playlist/add_song")
 def add_song_to_playlist(user_id: int, song_id: int, playlist_id: int):
