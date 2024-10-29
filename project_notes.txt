@@ -6,4 +6,4 @@ the Supabase URI is being used to create the database engine directly in main fo
 you need your own virtual environment on your machine which has the requirements.txt dependencies installed
 can explicitly run in the virtual environment command line if needed: pip install -r requirements.txt
 
-the api endpoints here connect to our render service when they are pushed onto the correct branch of the online repo
+the api endpoints here connect to our render service when they are pushed onto the correct branch (render-deployment for now) of the online repo
