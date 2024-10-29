@@ -14,6 +14,14 @@ def read_item(item_id: int, q: Optional[str] = None):
     return {"item_id": item_id, "q": q}
 
 @app.post("/testing/{item_id}")
-def read_item(num: int):
-    print('testing output')
-    return {"item_id": 333}
+def read_item(num: int): # parameters show up in docs
+    print('testing output') # prints show up in render log
+    return {"item_id": 333} # returns act as responses
+
+@app.post("/user/{user_id}/playlist/create_playlist")
+def create_playlist(user_id: int):
+    # insert playlist into table
+    
+    # return playlist_id ???
+
+    pass
