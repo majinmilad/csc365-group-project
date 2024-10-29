@@ -1,6 +1,12 @@
 # Example Flows– Provide in ExampleFlows.md
 Examples for how endpoints will be called and satisfy use cases/ user stories (at least 3)
 
+## Create a Playlist
+Milad user id: 2) wants to create a playlist to add all his favorite music
+  - He will call POST/playlist{name} to create a playlist
+  - Then he will call POST/playlist{name}/{songname} to add music to his playlist
+  - He can then call GET/playlist to view all the items in his playlist
+
 ## Playlist Merging/ Recommendation Flow
 Bob (user id: 1234) has saved a lot of playlists to his user account and wants to combine a select few of them to merge into a single playlist. 
   - He starts by calling GET /users/1234/playlists to retrieve all playlists he has saved to his account.
