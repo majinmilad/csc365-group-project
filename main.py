@@ -64,9 +64,9 @@ def merge_playlists(user_id: int, playlist_ids: List[int], new_playlist_name: st
 
         # make empty playlist to store merged playlist in
         make_playlist_sql = """  
-                                INSERT INTO playlist (user_id, playlist_name)
-                                VALUES (:user_id, :playlist_name)
-                                RETURNING playlist_id
+                            INSERT INTO playlist (user_id, playlist_name)
+                            VALUES (:user_id, :playlist_name)
+                            RETURNING playlist_id
                             """
         new_playlist_result = connection.execute(
             sqlalchemy.text(make_playlist_sql),
@@ -76,10 +76,10 @@ def merge_playlists(user_id: int, playlist_ids: List[int], new_playlist_name: st
 
         # get all songs ids to put into a playlist
         get_songs_sql = """
-                    SELECT DISTINCT song_id
-                    FROM playlist_song
-                    WHERE playlist_id = ANY(:playlist_ids)
-                """
+                        SELECT DISTINCT song_id
+                        FROM playlist_song
+                        WHERE playlist_id = ANY(:playlist_ids)
+                        """
         result = connection.execute(sqlalchemy.text(get_songs_sql), {'playlist_ids': playlist_ids})
         song_ids = [row['song_id'] for row in result]
 
@@ -99,10 +99,10 @@ def update_playlist(user_id: int, playlist_id: int, new_name: Optional[str] = No
 
         # update playlist name-- if it belongs to the user
         sql_to_execute = """
-                            UPDATE playlist SET playlist_name = :new_name 
-                            WHERE playlist_id = :playlist_id 
-                            AND user_id = :user_id
-                        """
+                         UPDATE playlist SET playlist_name = :new_name 
+                         WHERE playlist_id = :playlist_id 
+                         AND user_id = :user_id
+                         """
         result = connection.execute(
             sqlalchemy.text(sql_to_execute),
             {'new_name': new_name, 'playlist_id': playlist_id, 'user_id': user_id}
@@ -115,7 +115,21 @@ def update_playlist(user_id: int, playlist_id: int, new_name: Optional[str] = No
     return {"message": "Playlist updated"}
 
 
+@app.patch("/users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}")
+def add_collaborator(playlist_id: int, collaborator_user_id: int):
+    
+    with engine.begin() as connection:
+
+        # insert record connecting playlist to collaborating user
+        make_playlist_sql = """  
+                            INSERT INTO playlist_collaborator (playlist_id, user_id)
+                            VALUES (:playlist_id, :user_id)
+                            """
+        connection.execute(sqlalchemy.text(make_playlist_sql), {'playlist_id': playlist_id, 'user_id': collaborator_user_id})
+
+
 if __name__ == "__main__":
     # create_playlist(user_id=24, playlist_name='dope ass playlist')
     # add_song_to_playlist(3, 4, 5)
+    # add_collaborator(3, 7)
     pass
