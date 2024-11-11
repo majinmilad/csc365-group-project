@@ -53,9 +53,22 @@ def get_user_playlists(user_id: int):
         # retrieve all playlists for a user
         sql_to_execute = 'SELECT playlist_id, playlist_name FROM playlist WHERE user_id = :user_id'
         playlists = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id})
-        playlist_list = [{'playlist_id': row['playlist_id'], 'playlist_name': row['playlist_name']} for row in playlists]
+        playlist_list = []
+        for playlist in playlists:
+            playlist_list.append({'playlist_id': playlist[0], 'playlist_name': playlist[1]})
     return playlist_list
 
+@app.get("/users/{user_id}/playlists/{id}")
+def get_a_playlist(user_id: int, playlist_id: int):
+    with engine.begin() as connection:
+
+        # retrieve all playlists for a user
+        sql_to_execute = 'SELECT playlist_id, playlist_name FROM playlist WHERE user_id = :user_id AND playlist_id = :playlist_id'
+        playlists = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id, 'playlist_id': playlist_id})
+        playlist_list = []
+        for playlist in playlists:
+            playlist_list.append({'playlist_id': playlist[0], 'playlist_name': playlist[1]})
+    return playlist_list
 
 @app.post("/users/{user_id}/playlists/merge")
 def merge_playlists(user_id: int, playlist_ids: List[int], new_playlist_name: str):
@@ -126,6 +139,20 @@ def add_collaborator(playlist_id: int, collaborator_user_id: int):
                             VALUES (:playlist_id, :user_id)
                             """
         connection.execute(sqlalchemy.text(make_playlist_sql), {'playlist_id': playlist_id, 'user_id': collaborator_user_id})
+    return 'OK'
+
+@app.delete("/users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}")
+def remove_collaborator(playlist_id: int, collaborator_user_id: int):
+    
+    with engine.begin() as connection:
+
+        # insert record connecting playlist to collaborating user
+        make_playlist_sql = """  
+                            DELETE FROM playlist_collaborator
+                            WHERE playlist_id = :playlist_id AND user_id = :user_id
+                            """
+        connection.execute(sqlalchemy.text(make_playlist_sql), {'playlist_id': playlist_id, 'user_id': collaborator_user_id})
+    return 'OK'
 
 
 if __name__ == "__main__":
