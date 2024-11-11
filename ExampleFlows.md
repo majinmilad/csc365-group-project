@@ -19,7 +19,3 @@ Edson(user id: 47) wants to add his friend as a collaborator for one of his play
   - He then calls POST/users/{id}/playlists/{id} to retrieve a particular playlist he wants share
   - Finally he calls POST/playlists/{id}/collaborators to add his friend to his playlist
   - If his friend starts adding trash music or is messing with the vibe they can remove them with DELETE/playlists/{id}/collaborators/{collaborator_id}
-
-## Controlling privacy settings
-Jeremy's (user id: 100) ex-girlfriend keeps stalking his playlists how could Jeremy combat this
-  - He calls PUT/playlists/{id}/privacy and is able to change the privacy settings on his account and playlists to friends-only. 
