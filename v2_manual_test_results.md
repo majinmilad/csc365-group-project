@@ -12,7 +12,8 @@ Edson(user id: 47) wants to add his friend as a collaborator for one of his play
   - If his friend starts adding trash music or is messing with the vibe they can remove them with DELETE/playlists/{id}/collaborators/{collaborator_id}
 
 # Testing Results
-##Playlist Merging/ Recommendation Flow
+## Playlist Merging/ Recommendation Flow
+
 First Line
 1. curl -X 'GET' \
   'http://127.0.0.1:8000/users/69/playlists' \
@@ -57,4 +58,50 @@ Third Line
   "message": "Playlist updated"
 }
 
-##Adding Contributor to Playlist
+## Adding Contributor to Playlist
+
+First Line
+1. curl -X 'GET' \
+  'http://127.0.0.1:8000/users/69/playlists' \
+  -H 'accept: application/json'
+2. [
+  {
+    "playlist_id": 17,
+    "playlist_name": "oldies"
+  },
+  {
+    "playlist_id": 18,
+    "playlist_name": "new_oldies"
+  },
+  {
+    "playlist_id": 19,
+    "playlist_name": "updated_oldies"
+  },
+  {
+    "playlist_id": 20,
+    "playlist_name": "outdated_oldies"
+  }
+]
+
+Second Line
+1. curl -X 'GET' \
+  'http://127.0.0.1:8000/users/69/playlists/{id}?playlist_id=20' \
+  -H 'accept: application/json'
+2. [
+  {
+    "playlist_id": 20,
+    "playlist_name": "outdated_oldies"
+  }
+]
+
+Third Line
+1. curl -X 'PATCH' \
+  'http://127.0.0.1:8000/users/{user_id}/playlists/20/collaborate/1' \
+  -H 'accept: application/json'
+2. "OK"
+
+Fourth Line
+1. curl -X 'DELETE' \
+  'http://127.0.0.1:8000/users/{user_id}/playlists/20/collaborate/1' \
+  -H 'accept: application/json'
+2. "OK"
