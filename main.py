@@ -27,7 +27,16 @@ def search_for_artists(artist_name: str = None):
     query_url = url + query
     response = requests.get(query_url, headers=headers)
     json_result = json.loads(response.content)
-    return 
+    artist_info = {
+        'id': json_result['artists']['items'][0]['id'],
+        'name': json_result['artists']['items'][0]['name'],
+        'type': json_result['artists']['items'][0]['type'],
+        'genres': json_result['artists']['items'][0]['genres'],
+        'popularity': json_result['artists']['items'][0]['popularity'],
+        'followers': json_result['artists']['items'][0]['followers']['total']
+    }
+    return artist_info
+search_for_artists("The Strokes")
 
 @app.get("/search/{song_name}")
 def search_for_songs(song_name: str = None):
@@ -39,7 +48,17 @@ def search_for_songs(song_name: str = None):
     query_url = url + query
     response = requests.get(query_url, headers=headers)
     json_result = json.loads(response.content)
-
+    song_info = {
+        'id': json_result['tracks']['items'][0]['id'],
+        'name': json_result['tracks']['items'][0]['name'],
+        'type': json_result['tracks']['items'][0]['type'],
+        'track': json_result['tracks']['items'][0]['track_number'],
+        'album': json_result['tracks']['items'][0]['album']['name'],
+        'artist': json_result['tracks']['items'][0]['artists'][0]['name'],
+        'popularity': json_result['tracks']['items'][0]['popularity'],
+        'duration' :json_result['tracks']['items'][0]['duration_ms']
+    }
+    return song_info
 
 @app.post("/user/{user_id}/playlist/create_playlist")
 def create_playlist(user_id: int, playlist_name: str = None):
