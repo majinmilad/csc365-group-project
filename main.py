@@ -17,17 +17,17 @@ engine = create_engine(DATABASE_URL)
 async def root():
     return {"message": "Changing this message! Whoo!"}
 
-@app.get("/search/{arist_name}")
-def search_for_artists(aritist_name: str = None):
+@app.get("/search/{artist_name}")
+def search_for_artists(artist_name: str = None):
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
     headers = spotify_auth.get_auth_header(token)
-    query = f"?q={aritist_name}&type=artist&limit=1"
+    query = f"?q={artist_name}&type=artist&limit=1"
 
     query_url = url + query
     response = requests.get(query_url, headers=headers)
     json_result = json.loads(response.content)
-    print(json_result)
+    return 
 
 @app.get("/search/{song_name}")
 def search_for_songs(song_name: str = None):
@@ -39,8 +39,6 @@ def search_for_songs(song_name: str = None):
     query_url = url + query
     response = requests.get(query_url, headers=headers)
     json_result = json.loads(response.content)
-    print(json_result)
-search_for_songs("Reptilia")
 
 
 @app.post("/user/{user_id}/playlist/create_playlist")
