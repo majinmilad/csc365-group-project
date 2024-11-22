@@ -2,7 +2,7 @@
 
 ## API Specification– Provide in APISpec.md
 Endpoint documentation (at least 8 and mixture of read/ write endpoints)
-  
+
 GET/users/{id}/playlists → retrieve all playlists associated with a user 
   - Parameters: id (unique identifier of user)
   - Response: 
@@ -46,4 +46,15 @@ DELETE/playlists/{id}/collaborators/{collaborator_id} → remove a collaborator 
   - Parameters: id (id of playlist; must be a saved playlist to the user’s account)
   - Id of collaborator you want to remove
   - Response: {“playlist_id”: integer, “collaborators”: [], “status”: “success or failure”}
+
+# Complex Endpoints
+GET/search/{song_name} ->
+- Parameters: Song_name
+- Response
+    [ {
+  "id": string, "name": string, "type": string, "genres": [string], "popularity": int, "followers": int} ]
+
+GET/search/{artist_name} ->
+- Paramters: artist_name
+-Response: [{ "id": string, "name": string, "type": string, "genres": [string], "popularity": int, "followers": int }]
  
