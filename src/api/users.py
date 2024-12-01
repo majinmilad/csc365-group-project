@@ -3,10 +3,41 @@ import sqlalchemy
 from src import database as db
 from typing import Optional, List
 
+# TODO: implement verification that user is either the owner or collaborator of a playlist before allowing edits to be made
+# TODO: implement path changes:
+# /user/{user_id}/playlist/create_playlist
+# Change to POST users/{user_id}/playlists
+# /user/{user_id}/playlist/add_song
+# Change to POST users/{user_id}/songs
+# users/{user_id}/playlists/{playlist_id}/update
+# Change to PATCH users/{user_id}/playlists/{playlist_id}/
+# /users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}
+# Change to POST /users/{user_id}/playlists/{playlist_id}/collaborators/{collaborator_user_id}
+# /users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}
+# Change to DELETE /users/{user_id}/playlists/{playlist_id}/collaborators/{collaborator_user_id}
+
+
 router = APIRouter(
     prefix="/users",
     tags=['users']
 )
+
+@router.post("/users/create")
+def create_user(first_name: str, last_name: str):
+    with db.engine.begin() as connection:
+
+        # insert new user into users table and retrieve user_id
+        sql_to_execute = """
+            INSERT INTO user (first_name, last_name) 
+            VALUES (:first_name, :last_name) 
+            RETURNING user_id
+        """
+        result = connection.execute(
+            sqlalchemy.text(sql_to_execute),
+            {'first_name': first_name, 'last_name': last_name}
+        )
+        return {"user_id": result.scalar()}
+
 
 @router.post("/user/{user_id}/playlist/create_playlist")
 def create_playlist(user_id: int, playlist_name: str = None):
@@ -32,6 +63,20 @@ def add_song_to_playlist(user_id: int, song_id: int, playlist_id: int):
 
     with db.engine.begin() as connection:
 
+        # validate user
+        user_exists = connection.execute(sqlalchemy.text(
+            "SELECT 1 FROM user WHERE user_id = :user_id"
+        ), {'user_id': user_id}).fetchone()
+
+        # validate playlist
+        playlist_exists = connection.execute(sqlalchemy.text(
+            "SELECT 1 FROM playlist WHERE playlist_id = :playlist_id"
+        ), {'playlist_id': playlist_id}).fetchone()
+
+        # check
+        if not user_exists or not playlist_exists:
+            return {"error": "Invalid user_id or playlist_id"}, 400
+
         # insert a new playlist into table
         sql_to_execute = 'INSERT INTO playlist_song (song_id, playlist_id) VALUES (:song_id, :playlist_id)'
         connection.execute(sqlalchemy.text(sql_to_execute), {'song_id': song_id, 'playlist_id': playlist_id})
@@ -46,10 +91,8 @@ def get_user_playlists(user_id: int):
         # retrieve all playlists for a user
         sql_to_execute = 'SELECT playlist_id, playlist_name FROM playlist WHERE user_id = :user_id'
         playlists = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id})
-        playlist_list = []
-        for playlist in playlists:
-            playlist_list.append({'playlist_id': playlist[0], 'playlist_name': playlist[1]})
-    return playlist_list
+        playlist_list = [{'playlist_id': p[0], 'playlist_name': p[1]} for p in playlists]
+        return JSONResponse(content=playlist_list, status_code=200) # encapsulate responses with HTTP status codes
 
 @router.get("/users/{user_id}/playlists/{id}")
 def get_a_playlist(user_id: int, playlist_id: int):
