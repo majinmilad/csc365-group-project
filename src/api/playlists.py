@@ -370,13 +370,36 @@ def get_song_information(song_id: int):
     song_data = {
         "song_id": song_info[0],
         "song_title": song_info[1],
-        "song_duration": f"{song_info[2]} sec"  
+        "song_duration": f"{song_info[2]} sec"
     }
 
     return JSONResponse(content=song_data, status_code=200)
 
 
-# view all playlists (LIMIT 100)
+@router.get("/all")
+def view_all_playlists():
+
+    with db.engine.begin() as connection:
+
+        # get first 100 rows of playlists
+        sql_query = sqlalchemy.text("""
+            SELECT playlist_id, playlist_name
+            FROM playlist
+            LIMIT 100
+        """)
+        playlists = connection.execute(sql_query).fetchall()
+
+    # no playlists to return
+    if not playlists:
+        return JSONResponse({"message": "No playlists available."}, status_code=404)
+
+    # build list of playlists
+    playlist_list = [
+        {"playlist_id": row[0], "playlist_name": row[1]}
+        for row in playlists
+    ]
+
+    return JSONResponse(content=playlist_list, status_code=200)
 
 
 def isEmpty(argument):
