@@ -1,8 +1,6 @@
-from fastapi import APIRouter, Depends, Request 
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter
 import sqlalchemy
 from src import database as db
-from typing import Optional, List
 
 router = APIRouter(
     prefix="/collaborators",

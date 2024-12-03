@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter
 import spotify_auth
 import requests
 import json
@@ -13,7 +13,7 @@ def search_for_artists(artist_name: str = None):
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
     headers = spotify_auth.get_auth_header(token)
-    query = f"?q={artist_name}&type=artist&limit=1"
+    query = f"?q={artist_name}&type=artist&limit=10"
 
     query_url = url + query
     response = requests.get(query_url, headers=headers)
@@ -30,11 +30,10 @@ def search_for_artists(artist_name: str = None):
 
 @router.get("/songs/{song_name}")
 def search_for_songs(song_name: str = None):
-    print("here")
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
     headers = spotify_auth.get_auth_header(token)
-    query = f"?q={song_name}&type=track&limit=1"
+    query = f"?q={song_name}&type=track&limit=10"
 
     query_url = url + query
     response = requests.get(query_url, headers=headers)
