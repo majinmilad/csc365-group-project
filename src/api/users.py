@@ -4,37 +4,44 @@ import sqlalchemy
 from src import database as db
 from typing import Optional, List
 
-# TODO: implement verification that user is either the owner or collaborator of a playlist before allowing edits to be made
-# TODO: implement path changes:
-# /user/{user_id}/playlist/create_playlist
-# Change to POST users/{user_id}/playlists
-# /user/{user_id}/playlist/add_song
-# Change to POST users/{user_id}/songs
-# users/{user_id}/playlists/{playlist_id}/update
-# Change to PATCH users/{user_id}/playlists/{playlist_id}/
-# /users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}
-# Change to POST /users/{user_id}/playlists/{playlist_id}/collaborators/{collaborator_user_id}
-# /users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}
-# Change to DELETE /users/{user_id}/playlists/{playlist_id}/collaborators/{collaborator_user_id}
-
-
 router = APIRouter(
     prefix="/users",
     tags=['users']
 )
 
 @router.post("/create")
-def create_user(first_name: str, last_name: str):
+def create_user(first_name: str, last_name: str, ssn: int):
     with db.engine.begin() as connection:
 
         # insert new user into users table and retrieve user_id
         sql_to_execute = """
-            INSERT INTO user (first_name, last_name) 
-            VALUES (:first_name, :last_name) 
+            INSERT INTO user_account (first_name, last_name, ssn) 
+            VALUES (:first_name, :last_name, :ssn) 
             RETURNING user_id
         """
         result = connection.execute(
             sqlalchemy.text(sql_to_execute),
-            {'first_name': first_name, 'last_name': last_name}
+            {'first_name': first_name, 'last_name': last_name, 'ssn': ssn}
         )
-        return {"user_id": result.scalar()}
+
+        user_id = result.scalar()
+
+        return {"user_id": user_id}
+
+
+@router.delete("/remove")
+def remove_user(user_id: int):
+    with db.engine.begin() as connection:
+
+        # remove row containing user_id
+        sql_to_execute = """
+            DELETE FROM user_account
+            WHERE user_id = :user_id
+        """
+        result = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id})
+
+        if result.rowcount == 0:
+            return {"error": "User not found"}, 404
+
+        return {"message": "User removed successfully"}
+
