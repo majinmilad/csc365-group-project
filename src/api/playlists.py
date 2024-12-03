@@ -110,43 +110,19 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
 
 # view a playlist's songs
 
+# view my playlists (including the ones you're following)
+
+# view the playlists of any specific user
+
 # view all playlists (LIMIT 100)
 
 
-@router.post("/{user_id}/playlists/merge")
-def merge_playlists(user_id: int, playlist_ids: List[int], new_playlist_name: str):
+# merge two playlists into a new one
 
-    with db.engine.begin() as connection:
 
-        # make empty playlist to store merged playlist in
-        make_playlist_sql = """  
-                            INSERT INTO playlist (user_id, playlist_name)
-                            VALUES (:user_id, :playlist_name)
-                            RETURNING playlist_id
-                            """
-        new_playlist_result = connection.execute(
-            sqlalchemy.text(make_playlist_sql),
-            {'user_id': user_id, 'playlist_name': new_playlist_name}
-        )
-        new_playlist_id = new_playlist_result.scalar()
 
-        # get all songs ids to put into a playlist
-        get_songs_sql = """
-                        SELECT DISTINCT song_id
-                        FROM playlist_song
-                        WHERE playlist_id = ANY(:playlist_ids)
-                        """
-        result = connection.execute(sqlalchemy.text(get_songs_sql), {'playlist_ids': playlist_ids})
-        song_ids = [row['song_id'] for row in result]
 
-        # batch insert each unique song into the new playlist
-        insert_data = [{"song_id": song_id, "new_playlist_id": new_playlist_id} for song_id in song_ids]
-        if insert_data:
-            add_song_sql = 'INSERT INTO playlist_song (song_id, playlist_id) VALUES (:song_id, :new_playlist_id)'
-            connection.execute(sqlalchemy.text(add_song_sql), insert_data)
-
-    return {"new_playlist_id": new_playlist_id, "message": "Playlists merged"}
-
+# basically a name updater but havent checked it vvv
 @router.patch("/{user_id}/playlists/{playlist_id}/update")
 def update_playlist(user_id: int, playlist_id: int, new_name: Optional[str] = None):
 
