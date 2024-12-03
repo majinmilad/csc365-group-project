@@ -82,6 +82,15 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
         ), {'playlist_id': playlist_id}).fetchone()
 
         # validate user has playlist modification auth
+        user_allowed = connection.execute(sqlalchemy.text(
+        """SELECT 1
+            FROM public.playlist
+            WHERE playlist_id = :playlist_id AND user_id = :user_id
+            OR EXISTS (
+            SELECT 1 
+            FROM public.playlist_collaborator 
+            WHERE playlist_id = :playlist_id AND user_id = :user_id)"""
+        ), {'user_id': current_user_id, 'playlist_id': playlist_id}).fetchone()
 
         # check
         if not user_exists or not playlist_exists or not song_exists:
@@ -91,7 +100,7 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
         sql_to_execute = 'INSERT INTO playlist_song (song_id, playlist_id) VALUES (:song_id, :playlist_id)'
         connection.execute(sqlalchemy.text(sql_to_execute), {'song_id': song_id, 'playlist_id': playlist_id})
     
-        return "Ok"
+        return Response(status_code=204) # use 204 to signal No Content for success without a body
 
 # remove song
 
