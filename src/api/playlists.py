@@ -118,7 +118,89 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
 
 
 # merge two playlists into a new one
+@router.post("/{user_id}/playlists/merge")
+def merge_playlists(user_id: int, playlist_one: int, playlist_two: int, new_playlist_name: str):
 
+    with db.engine.begin() as connection:
+
+        # validate user
+        user_exists_query = """
+            SELECT 1
+            FROM user_account
+            WHERE user_id = :user_id
+        """
+        user_exists = connection.execute(
+            sqlalchemy.text(user_exists_query),
+            {'user_id': user_id}
+        ).fetchone()
+
+        if not user_exists:
+            return {"error": "User ID does not exist"}, 404
+
+        # validate that playlist_one exists
+        playlist_one_query = """
+            SELECT 1
+            FROM playlist
+            WHERE playlist_id = :playlist_one 
+        """
+        playlist_one_exists = connection.execute(
+            sqlalchemy.text(playlist_one_query),
+            {'playlist_one': playlist_one}
+        ).fetchone()
+
+        if not playlist_one_exists:
+            return {"error": f"Playlist {playlist_one} does not exist"}, 404
+
+        # validate that playlist_two exists
+        playlist_two_query = """
+            SELECT 1
+            FROM playlist
+            WHERE playlist_id = :playlist_two 
+        """
+        playlist_two_exists = connection.execute(
+            sqlalchemy.text(playlist_two_query),
+            {'playlist_two': playlist_two}
+        ).fetchone()
+
+        if not playlist_two_exists:
+            return {"error": f"Playlist {playlist_two} does not exist"}, 404
+
+
+        # make empty playlist to store merged playlist in
+        make_playlist_sql = """  
+                            INSERT INTO playlist (user_id, playlist_name)
+                            VALUES (:user_id, :playlist_name)
+                            RETURNING playlist_id
+        """
+        new_playlist_result = connection.execute(
+            sqlalchemy.text(make_playlist_sql),
+            {'user_id': user_id, 'playlist_name': new_playlist_name}
+        )
+        new_playlist_id = new_playlist_result.scalar()
+
+        # get all songs ids to put into a playlist
+        get_songs_sql = """
+                        SELECT DISTINCT song_id
+                        FROM playlist_song
+                        WHERE playlist_id IN (:playlist_one, :playlist_two)
+        """
+        result = connection.execute(
+            sqlalchemy.text(get_songs_sql),
+            {'playlist_one': playlist_one, 'playlist_two': playlist_two}
+        ).mappings()
+
+        song_ids = [row['song_id'] for row in result]
+
+        # Step 6: Insert each unique song into the new playlist
+        insert_data = [{"song_id": song_id, "playlist_id": new_playlist_id} for song_id in song_ids]
+        if insert_data:
+            add_song_sql = """
+                        INSERT INTO playlist_song (song_id, playlist_id)
+                        VALUES (:song_id, :playlist_id)
+                    """
+            connection.execute(sqlalchemy.text(add_song_sql), insert_data)
+
+    return {"new_playlist_id": new_playlist_id, "message": "Playlists merged"}
 
 
 
