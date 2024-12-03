@@ -9,7 +9,7 @@ router = APIRouter(
     tags=['collaborators']
 )
 
-@router.post("/{user_id}/playlists/{playlist_id}/collaborators/add")
+@router.post("/{user_id}/playlists/{playlist_id}/add")
 def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: int):
     with db.engine.begin() as connection:
 
@@ -41,7 +41,7 @@ def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: in
     return {"message": "Collaborator added successfully"}
 
 
-@router.delete("/{user_id}/playlists/{playlist_id}/collaborators/remove")
+@router.delete("/{user_id}/playlists/{playlist_id}/remove")
 def remove_collaborator(playlist_id: int, current_user_id: int, collaborator_id: int):
     with db.engine.begin() as connection:
 
