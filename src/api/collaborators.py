@@ -28,13 +28,43 @@ def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: in
         if not is_owner:
             return {"error": "Only the owner can add collaborators"}, 403
 
-        # add the collaborator
-        sql_to_execute = """
-            INSERT INTO playlist_collaborator (playlist_id, user_id)
-            VALUES (:playlist_id, :collaborator_id)
-        """
+        # validate collaborator id
+        collaborator_exists_query = """
+                    SELECT 1
+                    FROM user_account
+                    WHERE user_id = :collaborator_id
+                """
+        collaborator_exists = connection.execute(
+            sqlalchemy.text(collaborator_exists_query),
+            {'collaborator_id': collaborator_id}
+        ).fetchone()
+
+        # collaborator id does not exist
+        if not collaborator_exists:
+            return {"error": "Collaborator ID does not exist"}, 404
+
+        # check if the collaborator is already added to the playlist
+        already_collaborator_query = """
+                    SELECT 1
+                    FROM playlist_collaborator
+                    WHERE playlist_id = :playlist_id AND user_id = :collaborator_id
+                """
+        already_collaborator = connection.execute(
+            sqlalchemy.text(already_collaborator_query),
+            {'playlist_id': playlist_id, 'collaborator_id': collaborator_id}
+        ).fetchone()
+
+        # collaborator is already a collaborator
+        if already_collaborator:
+            return {"message": "Collaborator already exists for this playlist"}, 200
+
+        # Add the collaborator
+        add_collaborator_query = """
+                    INSERT INTO playlist_collaborator (playlist_id, user_id)
+                    VALUES (:playlist_id, :collaborator_id)
+                """
         connection.execute(
-            sqlalchemy.text(sql_to_execute),
+            sqlalchemy.text(add_collaborator_query),
             {'playlist_id': playlist_id, 'collaborator_id': collaborator_id}
         )
 
