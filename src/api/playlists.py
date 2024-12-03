@@ -315,12 +315,69 @@ def follow_playlist(current_user_id: int, playlist_id: int):
     return JSONResponse(response, status_code=201)
 
 
+@router.get("/{user_id}/all-playlists")
+def view_user_playlists(user_id: int):
 
-# view my playlists (including the ones you're following)/view the playlists of any specific user
+    with db.engine.begin() as connection:
+
+        # get all playlists created by user (owner as role)
+        # get all playlists followed by user (follower as role)
+        sql_query = """
+            SELECT playlist.playlist_id, playlist.playlist_name, 'owner' as role
+            FROM playlist
+            WHERE playlist.user_id = :user_id
+            UNION
+            SELECT playlist.playlist_id, playlist.playlist_name, 'follower' as role
+            FROM playlist_follower
+            JOIN playlist ON playlist.playlist_id = playlist_follower.playlist_id
+            WHERE playlist_follower.user_id = :user_id
+        """
+        playlists = connection.execute(sqlalchemy.text(sql_query),
+                                       {'user_id': user_id}).fetchall()
+
+    # nothing returned-- user DNE or no user does not follow/ own playlists
+    if not playlists:
+        return JSONResponse({"message": "No playlists found for this user."}, status_code=404)
+
+    # build list of playlists
+    playlist_list = [
+        {"playlist_id": row[0], "playlist_name": row[1], "role": row[2]}
+        for row in playlists
+    ]
+
+    return JSONResponse(content=playlist_list, status_code=200)
+
+
+@router.get("/songs/{song_id}")
+def get_song_information(song_id: int):
+
+    with db.engine.begin() as connection:
+
+        # get song info for a song id
+        sql_query = """
+            SELECT song_id, title, duration
+            FROM song
+            WHERE song_id = :song_id
+        """
+        song_info = connection.execute(sqlalchemy.text(sql_query), {'song_id': song_id}).fetchone()
+
+    # song DNE in song table
+    if not song_info:
+        return JSONResponse({"message": "Song not found."}, status_code=404)
+
+
+    # format song information
+    song_data = {
+        "song_id": song_info[0],
+        "song_title": song_info[1],
+        "song_duration": f"{song_info[2]} sec"  
+    }
+
+    return JSONResponse(content=song_data, status_code=200)
+
 
 # view all playlists (LIMIT 100)
 
-# get song information (pass id in, returns song information)
 
 def isEmpty(argument):
     if(argument):
