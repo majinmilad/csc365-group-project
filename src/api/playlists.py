@@ -103,6 +103,25 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
         return Response(status_code=204) # use 204 to signal No Content for success without a body
 
 # remove a song from a playlist (only allowed by playlist creator or a collaborator)
+@router.delete("/{user_id}/playlist/{playlist_id}/{song_id}/delete_song")
+def delete_song_from_playlist(current_user_id: int, song_id: int, playlist_id: int):
+    with db.engine.begin() as connection:
+       sql_query = sqlalchemy.text("""
+        DELETE FROM playlist_song
+        WHERE playlist_id = :playlist_id AND song_id = :song_id AND 
+        (:user_id = (SELECT user_id
+                    FROM playlist
+                    WHERE playlist_id = :playlist_id) 
+        OR :user_id = (SELECT user_id 
+                    FROM playlist_collaborator
+                    WHERE playlist_id = :playlist_id))
+        """)
+       sql_dict = {
+           'user_id': current_user_id,
+           'song_id': song_id,
+           'playlist_id': playlist_id
+        }
+       connection.execute(sql_query, sql_dict)
 
 # view a playlist's songs
 
