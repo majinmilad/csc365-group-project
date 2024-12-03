@@ -142,10 +142,6 @@ def change_playlist_name(current_user_id: int, playlist_id: int, new_name: str):
         if not user_allowed:
             return {"ERROR": "Invalid user_id for specified playlist_id"}, 400
 
-        # insert a new playlist into table
-        sql_to_execute = 'INSERT INTO playlist_song (song_id, playlist_id) VALUES (:song_id, :playlist_id)'
-        connection.execute(sqlalchemy.text(sql_to_execute), {'song_id': song_id, 'playlist_id': playlist_id})
-
         # update playlist name
         sql_to_execute = """
                          UPDATE playlist SET playlist_name = :new_name 
