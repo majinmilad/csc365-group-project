@@ -68,12 +68,12 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
 
         # validate user
         user_exists = connection.execute(sqlalchemy.text(
-            "SELECT 1 FROM user WHERE user_id = :user_id"
+            "SELECT 1 FROM user_account WHERE user_id = :user_id"
         ), {'user_id': current_user_id}).fetchone()
 
         # validate song
         song_exists = connection.execute(sqlalchemy.text(
-            "SELECT 1 FROM playlist WHERE song_id = :song_id"
+            "SELECT 1 FROM song WHERE song_id = :song_id"
         ), {'song_id': song_id}).fetchone()
 
         # validate playlist
@@ -93,7 +93,7 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
         ), {'user_id': current_user_id, 'playlist_id': playlist_id}).fetchone()
 
         # check
-        if not user_exists or not playlist_exists or not song_exists:
+        if not user_exists or not playlist_exists or not song_exists or not user_allowed:
             return {"ERROR": "Invalid user_id, song_id or playlist_id"}, 400
 
         # insert a new playlist into table
