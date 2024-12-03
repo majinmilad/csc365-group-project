@@ -21,11 +21,11 @@ def create_playlist(current_user_id: int, playlist_name: str):
 
         playlist_id = result.scalar()
 
-    return playlist_id
+    return {"created_playlist_id": playlist_id}
 
 # delete a playlist belonging to the current user
 @router.delete("/{user_id}/playlist/{playlist_id}/delete")
-def delete_playlist(user_id: int, playlist_id: int):
+def delete_playlist(current_user_id: int, playlist_id: int):
     """
     Deletes a playlist by its ID if it belongs to the given user
     """
@@ -37,7 +37,7 @@ def delete_playlist(user_id: int, playlist_id: int):
                     FROM playlist
                     WHERE playlist_id = :playlist_id AND user_id = :user_id
                     """
-        result = connection.execute(sqlalchemy.text(check_sql), {'playlist_id': playlist_id, 'user_id': user_id}).scalar()
+        result = connection.execute(sqlalchemy.text(check_sql), {'playlist_id': playlist_id, 'user_id': current_user_id}).scalar()
 
         if not result:
             raise HTTPException(status_code=404, detail="Playlist not found or does not belong to the user")
@@ -60,7 +60,7 @@ def get_user_playlists(user_id: int):
         playlist_list = [{'playlist_id': p[0], 'playlist_name': p[1]} for p in playlists]
         return JSONResponse(content=playlist_list, status_code=200) # encapsulate responses with HTTP status codes
 
-# add a song to a playlist belonging to the user
+# add a song to a playlist (only allowed by playlist creator or a collaborator)
 @router.post("/{user_id}/playlist/add_song")
 def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
 
@@ -102,13 +102,48 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
     
         return Response(status_code=204) # use 204 to signal No Content for success without a body
 
-# remove song
-
-# change playlist name
-
-# follow playlist
+# remove a song from a playlist (only allowed by playlist creator or a collaborator)
 
 # view a playlist's songs
+
+# change playlist name (only creator is allowed)
+@router.patch("/{user_id}/playlists/{playlist_id}/update")
+def change_playlist_name(current_user_id: int, playlist_id: int, new_name: str):
+
+    with db.engine.begin() as connection:
+
+        # validate user has playlist name changing auth
+        user_allowed = connection.execute(sqlalchemy.text(
+        """SELECT 1
+            FROM playlist
+            WHERE playlist_id = :playlist_id AND user_id = :user_id"""
+        ), {'user_id': current_user_id, 'playlist_id': playlist_id}).fetchone()
+
+        # check
+        if not user_allowed:
+            return {"ERROR": "Invalid user_id for specified playlist_id"}, 400
+
+        # insert a new playlist into table
+        sql_to_execute = 'INSERT INTO playlist_song (song_id, playlist_id) VALUES (:song_id, :playlist_id)'
+        connection.execute(sqlalchemy.text(sql_to_execute), {'song_id': song_id, 'playlist_id': playlist_id})
+
+        # update playlist name
+        sql_to_execute = """
+                         UPDATE playlist SET playlist_name = :new_name 
+                         WHERE playlist_id = :playlist_id AND user_id = :user_id
+                         """
+        result = connection.execute(
+            sqlalchemy.text(sql_to_execute),
+            {'new_name': new_name, 'playlist_id': playlist_id, 'user_id': current_user_id}
+        )
+
+        # check if row was updated
+        if result.rowcount == 0:
+            return {"error": "Playlist not found or not owned by the user"}, 404
+
+        return {"message": "Playlist updated"}
+
+# follow playlist
 
 # view my playlists (including the ones you're following)
 
@@ -116,6 +151,7 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
 
 # view all playlists (LIMIT 100)
 
+# get song information (pass id in, returns song information)
 
 # merge two playlists into a new one
 @router.post("/{user_id}/playlists/merge")
@@ -201,28 +237,3 @@ def merge_playlists(user_id: int, playlist_one: int, playlist_two: int, new_play
             connection.execute(sqlalchemy.text(add_song_sql), insert_data)
 
     return {"new_playlist_id": new_playlist_id, "message": "Playlists merged"}
-
-
-
-# basically a name updater but havent checked it vvv
-@router.patch("/{user_id}/playlists/{playlist_id}/update")
-def update_playlist(user_id: int, playlist_id: int, new_name: Optional[str] = None):
-
-    with db.engine.begin() as connection:
-
-        # update playlist name-- if it belongs to the user
-        sql_to_execute = """
-                         UPDATE playlist SET playlist_name = :new_name 
-                         WHERE playlist_id = :playlist_id 
-                         AND user_id = :user_id
-                         """
-        result = connection.execute(
-            sqlalchemy.text(sql_to_execute),
-            {'new_name': new_name, 'playlist_id': playlist_id, 'user_id': user_id}
-        )
-
-        # check if row was updated
-        if result.rowcount == 0:
-            return {"error": "Playlist not found or not owned by the user"}, 404
-
-    return {"message": "Playlist updated"}
