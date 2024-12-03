@@ -18,13 +18,16 @@ def get_user_playlists(user_id: int):
 
         # retrieve all playlists for a user
         sql_to_execute = 'SELECT playlist_id, playlist_name FROM playlist WHERE user_id = :user_id'
-        playlists = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id})
+        playlists = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': user_id}).fetchall()
+        if(isEmpty(playlists)):
+            response = {'message': 'no playlists found'}
+            return JSONResponse(response, status_code= 404)
         playlist_list = [{'playlist_id': p[0], 'playlist_name': p[1]} for p in playlists]
     return JSONResponse(content=playlist_list, status_code=200) # encapsulate responses with HTTP status codes
     
 
 # create a new playlist for a user
-@router.post("/{user_id}/playlist/create_playlist")
+@router.post("/{user_id}")
 def create_playlist(current_user_id: int, playlist_name: str):
     
     with db.engine.begin() as connection:
@@ -39,7 +42,7 @@ def create_playlist(current_user_id: int, playlist_name: str):
 
 
 # merge two playlists into a new one
-@router.post("/{user_id}/playlists/merge")
+@router.post("/{user_id}/merge/{playlist_one}/{playlist_two}")
 def merge_playlists(user_id: int, playlist_one: int, playlist_two: int, new_playlist_name: str):
 
     with db.engine.begin() as connection:
@@ -124,40 +127,6 @@ def merge_playlists(user_id: int, playlist_one: int, playlist_two: int, new_play
     return {"new_playlist_id": new_playlist_id, "message": "Playlists merged"}
 
 
-# change playlist name (only creator is allowed)
-@router.patch("/{user_id}/playlists/{playlist_id}/update")
-def change_playlist_name(current_user_id: int, playlist_id: int, new_name: str):
-
-    with db.engine.begin() as connection:
-
-        # validate user has playlist name changing auth
-        user_allowed = connection.execute(sqlalchemy.text(
-        """SELECT 1
-            FROM playlist
-            WHERE playlist_id = :playlist_id AND user_id = :user_id"""
-        ), {'user_id': current_user_id, 'playlist_id': playlist_id}).fetchone()
-
-        # check
-        if not user_allowed:
-            return {"ERROR": "Invalid user_id for specified playlist_id"}, 400
-
-        # update playlist name
-        sql_to_execute = """
-                         UPDATE playlist SET playlist_name = :new_name 
-                         WHERE playlist_id = :playlist_id AND user_id = :user_id
-                         """
-        result = connection.execute(
-            sqlalchemy.text(sql_to_execute),
-            {'new_name': new_name, 'playlist_id': playlist_id, 'user_id': current_user_id}
-        )
-
-        # check if row was updated
-        if result.rowcount == 0:
-            return {"error": "Playlist not found or not owned by the user"}, 404
-
-        return {"message": "Playlist updated"}
-
-
 # delete a playlist belonging to the current user
 @router.delete("/{user_id}/playlist/{playlist_id}/delete")
 def delete_playlist(current_user_id: int, playlist_id: int):
@@ -202,12 +171,14 @@ def get_songs(playlist_id: int):
         playlist.append({
             str(i + 1): song
         })
-    return playlist
+    if(isEmpty(playlist)):
+        return JSONResponse({"message": "playlist is empty"}, status_code=200)
+    return JSONResponse(playlist, status_code=200)
 
 
 
 # add a song to a playlist (only allowed by playlist creator or a collaborator)
-@router.post("/{user_id}/playlist/{playlist}/{song_id}/add_song")
+@router.post("/{user_id}/playlist/{playlist}/songs/{song_id}")
 def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
 
     with db.engine.begin() as connection:
@@ -243,17 +214,44 @@ def add_song_to_playlist(current_user_id: int, song_id: int, playlist_id: int):
             return {"ERROR": "Invalid user_id, song_id or playlist_id"}, 400
 
         # insert a new playlist into table
+        print(current_user_id, song_id, playlist_id)
         sql_to_execute = 'INSERT INTO playlist_song (song_id, playlist_id) VALUES (:song_id, :playlist_id)'
         connection.execute(sqlalchemy.text(sql_to_execute), {'song_id': song_id, 'playlist_id': playlist_id})
-    
-        return Response(status_code=204) # use 204 to signal No Content for success without a body
+        response = {'message': 'Playlist added successfully'}
+        return JSONResponse(response, status_code=200)
 
 
 # remove a song from a playlist (only allowed by playlist creator or a collaborator)
-@router.delete("/{user_id}/playlist/{playlist_id}/{song_id}/delete_song")
+@router.delete("/{user_id}/playlist/{playlist_id}/songs/{song_id}")
 def delete_song_from_playlist(current_user_id: int, song_id: int, playlist_id: int):
     with db.engine.begin() as connection:
-       sql_query = sqlalchemy.text("""
+        sql_dict = {
+           'user_id': current_user_id,
+           'song_id': song_id,
+           'playlist_id': playlist_id
+        }
+        sql_query_exists = sqlalchemy.text("""
+            SELECT 1
+            FROM playlist_song
+            WHERE playlist_song.playlist_id = :playlist_id AND playlist_song.song_id = :song_id
+            """)
+        exists = connection.execute(sql_query_exists, sql_dict).fetchone()
+        if(not(exists)):
+            response = {"message": "Song does not exist"}
+            return JSONResponse(response, status_code=404)
+        
+        sql_query_permission = sqlalchemy.text("""
+            SELECT 1
+            FROM playlist
+            JOIN playlist_song ON playlist_song.playlist_id = playlist.playlist_id
+            WHERE user_id = :user_id AND playlist.playlist_id = :playlist_id AND song_id = :song_id
+            """)
+        has_permission = connection.execute(sql_query_permission, sql_dict).fetchone()
+        if(not(has_permission)):
+            response = {"message": "You must own the playlist to delete a song"}
+            return JSONResponse(response, status_code=403)
+
+        sql_query = sqlalchemy.text("""
         DELETE FROM playlist_song
         WHERE playlist_id = :playlist_id AND song_id = :song_id AND 
         (:user_id = (SELECT user_id
@@ -263,12 +261,9 @@ def delete_song_from_playlist(current_user_id: int, song_id: int, playlist_id: i
                     FROM playlist_collaborator
                     WHERE playlist_id = :playlist_id))
         """)
-       sql_dict = {
-           'user_id': current_user_id,
-           'song_id': song_id,
-           'playlist_id': playlist_id
-        }
-       connection.execute(sql_query, sql_dict)
+        connection.execute(sql_query, sql_dict)
+    response = {"message": "Song successfully deleted"}
+    return JSONResponse(response, status_code=200)
 
 # follow playlist
 @router.post("/{user_id}/playlist/{playlist_id}")
