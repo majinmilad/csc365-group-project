@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request 
+from fastapi.responses import JSONResponse
 import sqlalchemy
 from src import database as db
 from typing import Optional, List
+import json
 
 # TODO: implement verification that user is either the owner or collaborator of a playlist before allowing edits to be made
 # TODO: implement path changes:
@@ -22,7 +24,7 @@ router = APIRouter(
     tags=['users']
 )
 
-@router.post("/users/create")
+@router.post("/create")
 def create_user(first_name: str, last_name: str):
     with db.engine.begin() as connection:
 
@@ -39,7 +41,7 @@ def create_user(first_name: str, last_name: str):
         return {"user_id": result.scalar()}
 
 
-@router.post("/user/{user_id}/playlist/create_playlist")
+@router.post("/{user_id}/playlist/create_playlist")
 def create_playlist(user_id: int, playlist_name: str = None):
     
     with db.engine.begin() as connection:
@@ -58,7 +60,7 @@ def create_playlist(user_id: int, playlist_name: str = None):
     return playlist_id
 
 
-@router.post("/user/{user_id}/playlist/add_song")
+@router.post("/{user_id}/playlist/add_song")
 def add_song_to_playlist(user_id: int, song_id: int, playlist_id: int):
 
     with db.engine.begin() as connection:
@@ -84,7 +86,7 @@ def add_song_to_playlist(user_id: int, song_id: int, playlist_id: int):
     return "Ok"
 
 
-@router.get("/users/{user_id}/playlists")
+@router.get("/{user_id}/playlists")
 def get_user_playlists(user_id: int):
     with db.engine.begin() as connection:
 
@@ -94,7 +96,7 @@ def get_user_playlists(user_id: int):
         playlist_list = [{'playlist_id': p[0], 'playlist_name': p[1]} for p in playlists]
         return JSONResponse(content=playlist_list, status_code=200) # encapsulate responses with HTTP status codes
 
-@router.get("/users/{user_id}/playlists/{id}")
+@router.get("/{user_id}/playlists/{id}")
 def get_a_playlist(user_id: int, playlist_id: int):
     with db.engine.begin() as connection:
 
@@ -106,7 +108,7 @@ def get_a_playlist(user_id: int, playlist_id: int):
             playlist_list.append({'playlist_id': playlist[0], 'playlist_name': playlist[1]})
     return playlist_list
 
-@router.post("/users/{user_id}/playlists/merge")
+@router.post("/{user_id}/playlists/merge")
 def merge_playlists(user_id: int, playlist_ids: List[int], new_playlist_name: str):
 
     with db.engine.begin() as connection:
@@ -141,7 +143,7 @@ def merge_playlists(user_id: int, playlist_ids: List[int], new_playlist_name: st
     return {"new_playlist_id": new_playlist_id, "message": "Playlists merged"}
 
 
-@router.patch("/users/{user_id}/playlists/{playlist_id}/update")
+@router.patch("/{user_id}/playlists/{playlist_id}/update")
 def update_playlist(user_id: int, playlist_id: int, new_name: Optional[str] = None):
 
     with db.engine.begin() as connection:
@@ -164,7 +166,7 @@ def update_playlist(user_id: int, playlist_id: int, new_name: Optional[str] = No
     return {"message": "Playlist updated"}
 
 
-@router.patch("/users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}")
+@router.patch("/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}")
 def add_collaborator(playlist_id: int, collaborator_user_id: int):
     
     with db.engine.begin() as connection:
@@ -177,7 +179,7 @@ def add_collaborator(playlist_id: int, collaborator_user_id: int):
         connection.execute(sqlalchemy.text(make_playlist_sql), {'playlist_id': playlist_id, 'user_id': collaborator_user_id})
     return 'OK'
 
-@router.delete("/users/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}")
+@router.delete("/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_user_id}")
 def remove_collaborator(playlist_id: int, collaborator_user_id: int):
     
     with db.engine.begin() as connection:

@@ -8,7 +8,7 @@ router = APIRouter(
     tags=['search']
 )
 
-@router.get("/search/{artist_name}")
+@router.get("/artists/{artist_name}")
 def search_for_artists(artist_name: str = None):
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
@@ -26,10 +26,12 @@ def search_for_artists(artist_name: str = None):
         'popularity': json_result['artists']['items'][0]['popularity'],
         'followers': json_result['artists']['items'][0]['followers']['total']
     }
+    print(artist_info)
     return artist_info
 
-@router.get("/search/{song_name}")
+@router.get("/songs/{song_name}")
 def search_for_songs(song_name: str = None):
+    print("here")
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
     headers = spotify_auth.get_auth_header(token)
