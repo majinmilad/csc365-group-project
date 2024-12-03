@@ -2,7 +2,7 @@ from fastapi import FastAPI, exceptions
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 #add api endpoints here and down there
-from src.api import search, users
+from src.api import search, users, collaborators, playlists
 import json
 import logging
 import sys
@@ -36,6 +36,8 @@ app.add_middleware(
 #add api points here 
 app.include_router(search.router)
 app.include_router(users.router)
+app.include_router(collaborators.router)
+app.include_router(playlists.router)
 
 
 @app.exception_handler(exceptions.RequestValidationError)

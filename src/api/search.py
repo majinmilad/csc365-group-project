@@ -26,7 +26,6 @@ def search_for_artists(artist_name: str = None):
         'popularity': json_result['artists']['items'][0]['popularity'],
         'followers': json_result['artists']['items'][0]['followers']['total']
     }
-    print(artist_info)
     return artist_info
 
 @router.get("/songs/{song_name}")
