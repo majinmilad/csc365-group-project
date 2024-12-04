@@ -19,7 +19,7 @@ router = APIRouter(
 #recommend people
 
 #add songs to song table by searching them (admin only)
-@router.get("/song/{name}/{album}/{artist}")
+@router.post("/song/{name}/{album}/{artist}")
 def Add_to_songs_table_database(song_name: str = '', album_name: str = '', artist_name: str = ''):
     if(isEmpty(song_name) and isEmpty(album_name) and isEmpty(artist_name)):
         return JSONResponse({"Error": "Nothing Entered"}, status_code=400)
