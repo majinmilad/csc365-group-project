@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 import sqlalchemy
 from src import database as db
 from fastapi.responses import JSONResponse
@@ -38,8 +38,7 @@ def create_user(first_name: str, last_name: str, ssn: int):
 
         user_id = result.scalar()
 
-        response = {"message": "User successfully created", "user_id": user_id}
-        return JSONResponse(response, status_code= 201)
+        return Response(status_code= 201)
 
 
 @router.delete("/remove")
@@ -57,8 +56,7 @@ def remove_user(user_id: int):
             response = {"Error": "User not found"}
             return JSONResponse(response, status_code= 400)
 
-        response = {"message": "User removed successfully"}
-        return JSONResponse(response, status_code= 200)
+        return Response(status_code= 200)
 
 @router.post("/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_id}")
 def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: int):
@@ -77,7 +75,8 @@ def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: in
 
         # playlist does not belong to current user
         if not is_owner:
-            return {"error": "Only the owner can add collaborators"}, 403
+            response = {"Error": "Only the owner can add collaborators"}
+            return JSONResponse(response, status_code= 401)
 
         # validate collaborator id
         collaborator_exists_query = """
@@ -92,7 +91,8 @@ def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: in
 
         # collaborator id does not exist
         if not collaborator_exists:
-            return {"error": "Collaborator ID does not exist"}, 404
+            response = {"Error": "Collaborator ID does not exist"}
+            return JSONResponse(response, status_code= 404)
 
         # check if the collaborator is already added to the playlist
         already_collaborator_query = """
@@ -107,7 +107,8 @@ def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: in
 
         # collaborator is already a collaborator
         if already_collaborator:
-            return {"message": "Collaborator already exists for this playlist"}, 200
+            response = {"Error": "Collaborator already exists for this playlist"}
+            return JSONResponse(response, status_code= 409)
 
         # Add the collaborator
         add_collaborator_query = """
@@ -118,8 +119,7 @@ def add_collaborator(playlist_id: int, current_user_id: int, collaborator_id: in
             sqlalchemy.text(add_collaborator_query),
             {'playlist_id': playlist_id, 'collaborator_id': collaborator_id}
         )
-
-    return {"message": "Collaborator added successfully"}
+    Response(status_code= 200)
 
 
 @router.delete("/{user_id}/playlists/{playlist_id}/collaborate/{collaborator_id}")
@@ -151,7 +151,8 @@ def remove_collaborator(playlist_id: int, current_user_id: int, collaborator_id:
         # - owner of playlist
         # - a collaborator of the playlist
         if not is_owner and not is_self:
-            return {"error": "Only the playlist owner or the collaborator themselves can remove collaborators"}, 403
+            response = {"Error": "Only the playlist owner or the collaborator themselves can remove collaborators"}
+            return JSONResponse(response, status_code= 401)
 
         # allow removal only if the current user is the owner or removing themselves
         if is_owner or (is_self and current_user_id == collaborator_id):
@@ -166,13 +167,15 @@ def remove_collaborator(playlist_id: int, current_user_id: int, collaborator_id:
 
             # collaborator to remove is not a collaborator on the playlist
             if result.rowcount == 0:
-                return {"error": "Collaborator not found in this playlist"}, 404
+                response = {"Error": "Collaborator not found in this playlist"}
+                return JSONResponse(response, status_code= 404)
 
             # successful removal of collaborator
-            return {"message": "Collaborator removed successfully"}
+            return Response(status_code= 200)
 
        # insufficient permissions
-        return {"error": "You are not authorized to remove this collaborator"}, 403
+        response = {"Error": "You are not authorized to remove this collaborator"}
+        return JSONResponse(response, status_code= 401)
 
 
 # change playlist name (only creator is allowed)
@@ -190,7 +193,8 @@ def change_playlist_name(current_user_id: int, playlist_id: int, new_name: str):
 
         # check
         if not user_allowed:
-            return {"ERROR": "Invalid user_id for specified playlist_id"}, 400
+            response = {"Error": "Invalid user_id for specified playlist_id"}
+            return JSONResponse(response, status_code= 400)
 
         # update playlist name
         sql_to_execute = """
@@ -204,6 +208,7 @@ def change_playlist_name(current_user_id: int, playlist_id: int, new_name: str):
 
         # check if row was updated
         if result.rowcount == 0:
-            return {"error": "Playlist not found or not owned by the user"}, 404
+            response = {"Error": "Playlist not found or not owned by the user"}
+            return JSONResponse(response, status_code= 404)
 
-        return {"message": "Playlist updated"}
+        return Response(status_code= 200)
