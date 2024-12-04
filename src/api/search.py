@@ -32,7 +32,7 @@ def search_for_playlists(playlist_name: str=''):
             })
     return results
 
-@router.get("/songs/{name}/{album}/{artist}")
+@router.get("/songs/{name}")
 def search_for_songs(song_name: str = ''):
     with db.engine.begin() as connection:
         sql_dict = {
