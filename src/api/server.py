@@ -1,4 +1,4 @@
-from fastapi import FastAPI, exceptions
+from fastapi import FastAPI, exceptions, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 #add api endpoints here and down there
@@ -6,6 +6,7 @@ from src.api import analytics, search, users, playlists
 import json
 import logging
 from starlette.middleware.cors import CORSMiddleware
+import time
 
 description = """
 Playlist Mixer TypeShit
@@ -53,3 +54,12 @@ async def validation_exception_handler(request, exc):
 @app.get("/")
 async def root():
     return {"message": "Welcome to Hell"}
+
+@app.middleware("http")
+async def measure_runtime(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    print(f"Endpoint {request.url.path} took {process_time:.4f} seconds")
+    return response
