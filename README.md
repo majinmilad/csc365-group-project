@@ -31,3 +31,11 @@ We have two ways we can delegate work. We can make a branch for each member and 
 
 > [!IMPORTANT]
 > The main branch should never be worked on directly. Either use an appropriate existing branch (and pull from main if desired) or create a new branch based on main for the developmental task at hand. These development branches will be merged back into main or stable-working when appropriate.
+
+## Documentation
+you need your own virtual environment on your machine which has the requirements.txt dependencies installed
+can explicitly run in the virtual environment command line if needed: pip install -r requirements.txt
+
+the api endpoints here connect to our render service when they are pushed onto the correct branch (render-deployment for now) of the online repo
+
+the render api ui docs page is https://csc365-group-project-render.onrender.com/docs

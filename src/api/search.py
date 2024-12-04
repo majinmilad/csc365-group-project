@@ -22,9 +22,9 @@ def search_for_artists(artist_name: str = None):
     for artist in json_result['artists']['items']:
         artist_list.append(
             {
-                'id': artist['id'],
+                #'id': artist['id'],
                 'name': artist['name'],
-                'type': artist['type'],
+                #'type': artist['type'],
                 'genres': artist['genres'],
                 'popularity': artist['popularity'],
                 'followers': artist['followers']['total']
@@ -32,12 +32,12 @@ def search_for_artists(artist_name: str = None):
         )
     return artist_list
 
-@router.get("/song/{song_name}")
-def search_for_songs(song_name: str = None):
+@router.get("/song/{name}/{album}/{artist}")
+def search_for_songs(song_name: str = '', album_name: str = '', artist_name: str = ''):
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
     headers = spotify_auth.get_auth_header(token)
-    query = f"?q={song_name}&type=track&limit=5"
+    query = f"?q={song_name + ' ' + album_name + ' ' + artist_name}&type=track&limit=5"
 
     query_url = url + query
     response = requests.get(query_url, headers=headers)
@@ -46,14 +46,14 @@ def search_for_songs(song_name: str = None):
     for song in json_result['tracks']['items']:
         song_list.append(
             {
-                'id': song['id'],
+                #'id': song['id'],
                 'name': song['name'],
-                'type': song['type'],
-                'track': song['track_number'],
+                #'type': song['type'],
+                #'track': song['track_number'],
                 'album': song['album']['name'],
                 'artist': song['artists'][0]['name'],
-                'popularity': song['popularity'],
-                'duration': song['duration_ms']
+                #'popularity': str(song['popularity']),
+                'duration': str(song['duration_ms']//1000) + 's'
             }
         )
     return song_list
