@@ -26,11 +26,11 @@ def Get_playlist_catalog():
 
     # no playlists to return
     if not playlists:
-        return JSONResponse({"message": "No playlists available."}, status_code=404)
+        return JSONResponse({"Error": "No playlists available."}, status_code=404)
 
     # build list of playlists
     playlist_list = [
-        {"playlist_id": row[0], "playlist_name": row[1]}
+        {"playlist_id": row.playlist_id, "playlist_name": row.playlist_name}
         for row in playlists
     ]
 
@@ -62,7 +62,7 @@ def Get_user_followed_and_created_playlists(user_id: int):
 
     # build list of playlists
     playlist_list = [
-        {"playlist_id": row[0], "playlist_name": row[1], "role": row[2]}
+        {"playlist_id": row.playlist_id, "playlist_name": row.playlist_name, "role": row[2]}
         for row in playlists
     ]
 
@@ -80,7 +80,7 @@ def get_user_created_playlists(user_id: int):
         if(isEmpty(playlists)):
             
             return JSONResponse({'message': 'no playlists found'}, status_code= 404)
-        playlist_list = [{'playlist_id': p[0], 'playlist_name': p[1]} for p in playlists]
+        playlist_list = [{'playlist_id': p.playlist_id, 'playlist_name': p.playlist_name} for p in playlists]
     return JSONResponse(content=playlist_list, status_code=200) # encapsulate responses with HTTP status codes
     
 
@@ -233,7 +233,7 @@ def get_songs(playlist_id: int):
         """)
 
         sql_query_songs = sqlalchemy.text("""
-            SELECT song.title
+            SELECT song.title as name
             FROM playlist_song
             JOIN song ON playlist_song.song_id = song.song_id
             WHERE playlist_song.playlist_id = :playlist_id
@@ -245,7 +245,7 @@ def get_songs(playlist_id: int):
 
         """)
         sql_query_user = sqlalchemy.text("""
-            SELECT concat(first_name, ' ', last_name)
+            SELECT concat(first_name, ' ', last_name) AS name
             FROM playlist
             JOIN user_account ON user_account.user_id = playlist.user_id
             WHERE playlist.playlist_id = :playlist_id
@@ -263,11 +263,11 @@ def get_songs(playlist_id: int):
 
     song_dict = {}
     for i, song in enumerate(songs):
-        song_dict[str(i + 1)] = song[0]
+        song_dict[str(i + 1)] = song.name
 
     playlist = {
-        'name': playlist_name[0],
-        'created_by': owner_name[0], 
+        'name': playlist_name.playlist_name,
+        'created_by': owner_name.name, 
         'tracks': song_dict
     }
     return playlist
@@ -293,9 +293,9 @@ def get_song_information(song_id: int):
 
     # format song information
     song_data = {
-        "song_id": song_info[0],
-        "song_title": song_info[1],
-        "song_duration": f"{song_info[2]}s"
+        "song_id": song_info.song_id,
+        "song_title": song_info.title,
+        "song_duration": f"{song_info.duration}s"
     }
 
     return JSONResponse(content=song_data, status_code=200)
@@ -407,14 +407,14 @@ def follow_playlist(current_user_id: int, playlist_id: int):
 
         #check if already followed
         sql_query_getname = sqlalchemy.text("""
-            SELECT playlist.playlist_name
+            SELECT playlist.playlist_name as p_name
             FROM playlist_follower
             JOIN playlist ON playlist.playlist_id = playlist_follower.playlist_id
             WHERE playlist_follower.user_id = :user_id AND playlist_follower.playlist_id = :playlist_id
             """)
         playlist_name = connection.execute(sql_query_getname, sql_dict).fetchone()
         if(playlist_name):
-            response = {"Error": f"You already follow {playlist_name[0]}"}
+            response = {"Error": f"You already follow {playlist_name.p_name}"}
             return JSONResponse(response, status_code=409)
         
         #check if the playlist is owned by the user
@@ -424,14 +424,14 @@ def follow_playlist(current_user_id: int, playlist_id: int):
             WHERE playlist_id = :playlist_id AND user_id = :user_id
             """)
         sql_query_getname_if_owner = sqlalchemy.text("""
-            SELECT playlist.playlist_name
+            SELECT playlist.playlist_name as p_name
             FROM playlist
             WHERE playlist.user_id = :user_id AND playlist.playlist_id = :playlist_id
             """)
         isOwner = connection.execute(sql_query_checkifowner, sql_dict).fetchone()
         playlist_name = connection.execute(sql_query_getname_if_owner, sql_dict).fetchone()
         if(isOwner):
-            response = {"Error": f"Cannot follow {playlist_name[0]} as you created it."}
+            response = {"Error": f"Cannot follow {playlist_name.p_name} as you created it."}
             return JSONResponse(response, status_code=409)
 
         #insert new column with user now following playlist
@@ -442,7 +442,7 @@ def follow_playlist(current_user_id: int, playlist_id: int):
         connection.execute(sql_query_insert, sql_dict)
 
         playlist_name = connection.execute(sql_query_getname, sql_dict).fetchone()
-    response = {"Success": f"You are now following {playlist_name[0]}"}
+    response = {"Success": f"You are now following {playlist_name.p_name}"}
     return JSONResponse(response, status_code=201)
 
 
@@ -464,20 +464,20 @@ def unfollow_playlist(current_user_id: int, playlist_id: int):
         follows = connection.execute(sql_query_check, sql_dict).fetchone()
 
         sql_query_getname = sqlalchemy.text("""
-            SELECT playlist_name
+            SELECT playlist_name as p_name
             FROM playlist
             WHERE playlist_id = :playlist_id
             """)
         playlist_name = connection.execute(sql_query_getname, sql_dict).fetchone()
         if(not(follows)):
-            return JSONResponse({"Error": f"You don't follow {playlist_name[0]}"}, status_code=400)
+            return JSONResponse({"Error": f"You don't follow {playlist_name.p_name}"}, status_code=400)
             
         sql_query = sqlalchemy.text("""
         DELETE FROM playlist_follower
         WHERE playlist_id = :playlist_id AND user_id = :user_id
         """)
         connection.execute(sql_query, sql_dict)
-        return JSONResponse({"Success": f"You unfollowed {playlist_name[0]}"}, status_code=200)
+        return JSONResponse({"Success": f"You unfollowed {playlist_name.p_name}"}, status_code=200)
 
 def isEmpty(argument):
     if(argument):
