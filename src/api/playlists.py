@@ -89,7 +89,16 @@ def get_user_created_playlists(user_id: int):
 def create_playlist(current_user_id: int, playlist_name: str):
     
     with db.engine.begin() as connection:
-
+        sql_user_exists = sqlalchemy.text("""
+            SELECT 1
+            FROM user_account
+            WHERE user_id = :user_id
+            """)
+        exists = connection.execute(sql_user_exists, {'user_id': current_user_id}).fetchone()
+        print(exists)
+        if(not(exists)):
+            return JSONResponse({"Error": "User does not exist"}, status_code=404)
+        
         # insert a new playlist into table
         sql_to_execute = 'INSERT INTO playlist (user_id, playlist_name) VALUES (:user_id, :playlist_name) RETURNING playlist_id'
         result = connection.execute(sqlalchemy.text(sql_to_execute), {'user_id': current_user_id, 'playlist_name': playlist_name})
