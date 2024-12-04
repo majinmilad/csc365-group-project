@@ -18,11 +18,12 @@ router = APIRouter(
 #recommend songs/albums/artists
 #recommend people
 
-#add songs by searching them
+#add songs to song table by searching them (admin only)
 @router.get("/song/{name}/{album}/{artist}")
-def search_for_songs(song_name: str = '', album_name: str = '', artist_name: str = ''):
+def Add_to_songs_table_database(song_name: str = '', album_name: str = '', artist_name: str = ''):
     if(isEmpty(song_name) and isEmpty(album_name) and isEmpty(artist_name)):
         return JSONResponse({"Error": "Nothing Entered"}, status_code=400)
+    
     token = spotify_auth.get_spotify_token()
     url = "https://api.spotify.com/v1/search"
     headers = spotify_auth.get_auth_header(token)
