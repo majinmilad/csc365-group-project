@@ -2,10 +2,9 @@ from fastapi import FastAPI, exceptions
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 #add api endpoints here and down there
-from src.api import search, users, collaborators, playlists
+from src.api import analytics, search, users, playlists
 import json
 import logging
-import sys
 from starlette.middleware.cors import CORSMiddleware
 
 description = """
@@ -34,9 +33,9 @@ app.add_middleware(
 )
 
 #add api points here 
+app.include_router(analytics.router)
 app.include_router(search.router)
 app.include_router(users.router)
-app.include_router(collaborators.router)
 app.include_router(playlists.router)
 
 

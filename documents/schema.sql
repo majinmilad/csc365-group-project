@@ -37,7 +37,7 @@ create table
   ) tablespace pg_default;
 
 create table
-  public.playlist_collaborator (
+  public.playlist_follower (
     user_id bigint not null,
     playlist_id bigint not null,
     created_at timestamp with time zone not null default now(),
