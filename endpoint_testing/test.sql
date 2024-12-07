@@ -70,3 +70,60 @@ SELECT playlist.playlist_id as id, playlist_name, COUNT(playlist_follower.user_i
             WHERE playlist_name ILIKE :playlist_name
             GROUP BY id, playlist_name
             ORDER BY followers DESC
+
+SELECT artist.name AS artist_name, COALESCE(COUNT(playlist_song.playlist_id) + COUNT(song.song_id), 0) AS popularity
+FROM song
+JOIN album ON album.album_id = song.album_id
+JOIN artist ON artist.artist_id = song.artist_id
+LEFT JOIN playlist_song ON playlist_song.song_id = song.song_id
+WHERE artist.name ILIKE :artist_name
+GROUP BY artist.name
+ORDER BY popularity
+
+-- @router.get("/artists/{name}")
+-- def search_for_songs(artist_name: str = ''):
+--     with db.engine.begin() as connection:
+--         sql_dict = {
+--             'artist_name': artist_name
+--         }
+--         sql_query = sqlalchemy.text("""
+--             SELECT SUM(COALESCE(COUNT(playlist_song.playlist_id), 0), COALESCE(COUNT(song.song_id as id), 0)) AS popularity, artist.name as artist_name
+--             FROM song
+--             JOIN album ON album.album_id = song.album_id
+--             JOIN artist ON artist.artist_id = song.artist_id
+--             LEFT JOIN playlist_song ON playlist_song.song_id = song.song_id
+--             WHERE artist.name ILIKE :artist_name
+--             GROUP BY artist.name
+--             ORDER BY popularity
+--             """)
+--         songs = connection.execute(sql_query, sql_dict).fetchall()
+--         results = []
+--         for song in songs:
+--             results.append({
+--                 'id': song.id,
+--                 'popularity': song.popularity,
+--                 'name': song.song_title,
+--                 'album': song.album_title,
+--                 'artist': song.artist_name,
+--                 'duration': song.duration
+--             })
+--     return results
+
+SELECT playlist_id, COUNT(song_id) FROM playlist_song
+GROUP BY playlist_id
+ORDER BY count(song_id) DESC
+LIMIT 100
+
+SELECT playlist_follower.playlist_id, playlist.user_id, COUNT(playlist_follower.user_id) AS followers, COALESCE(COUNT(playlist_song.song_id), 0) as songs FROM playlist_follower
+JOIN playlist on playlist.playlist_id = playlist_follower.playlist_id
+JOIN playlist_song on playlist.playlist_id = playlist_song.playlist_id
+GROUP BY playlist_follower.playlist_id, playlist.user_id
+ORDER BY followers DESC, songs
+LIMIT 100
+
+SELECT DISTINCT playlist.playlist_id, playlist.user_id, 
+COUNT(playlist_follower.user_id) OVER (PARTITION BY playlist.playlist_id) AS followers,
+COUNT(playlist_song.song_id) OVER (PARTITION BY playlist.playlist_id) as songs FROM playlist
+JOIN playlist_follower on playlist.playlist_id = playlist_follower.playlist_id
+JOIN playlist_song on playlist.playlist_id = playlist_song.playlist_id
+WHERE playlist.playlist_id = 49148

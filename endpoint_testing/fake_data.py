@@ -157,7 +157,7 @@ with engine.begin() as conn:
         constraint playlist_songs_song_id_fkey foreign key (song_id) references song (song_id) on update cascade on delete cascade
     ) tablespace pg_default;
 
-    CREATE TABLE
+    create table
     public.playlist_collaborator (
         playlist_id bigint not null,
         user_id bigint not null,
@@ -167,12 +167,14 @@ with engine.begin() as conn:
         constraint playlist_collaborators_user_id_fkey foreign key (user_id) references user_account (user_id) on update cascade on delete cascade
     ) tablespace pg_default;
                                  
-    CREATE TABLE
+    create table
     public.playlist_follower (
-    user_id bigint not null,
-    playlist_id bigint not null,
-    created_at timestamp with time zone not null default now(),
-    constraint playlist_collaborator_pkey primary key (user_id, playlist_id)
+        user_id bigint not null,
+        playlist_id bigint not null,
+        created_at timestamp with time zone not null default now(),
+        constraint follow_playlist_pkey primary key (user_id, playlist_id),
+        constraint follow_playlist_playlist_id_fkey foreign key (playlist_id) references playlist (playlist_id) on update cascade on delete cascade,
+        constraint follow_playlist_user_id_fkey foreign key (user_id) references user_account (user_id) on update cascade on delete cascade
     ) tablespace pg_default;
     """))
 print("done\n")
