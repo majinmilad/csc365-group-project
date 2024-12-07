@@ -27,3 +27,4 @@ top_posters AS (
 SELECT * FROM top_posters
 JOIN top_followers ON top_posters.user_id = top_followers.user_id
 ORDER BY num_playlists DESC, num_follows DESC
+
