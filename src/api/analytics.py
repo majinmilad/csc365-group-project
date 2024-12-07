@@ -44,15 +44,16 @@ def most_popular_songs():
                 LEFT JOIN playlist_song ON playlist_song.song_id = song.song_id
                 JOIN album ON album.album_id = song.album_id
                 JOIN artist ON artist.artist_id = song.artist_id
-                LIMIT 100
             ),
             Distinct_songs AS
             (
-                SELECT DISTINCT Saves, Ranked_songs.title, album_name, artist_name, id
+                SELECT DISTINCT Saves, Ranked_songs.title, album_name, artist_name, Ranked_Songs.id
                 FROM Ranked_Songs
+                LIMIT 100
             )
             SELECT RANK() OVER (ORDER BY saves DESC, title ASC) AS Rnk, title, album_name, artist_name, id
             FROM Distinct_songs
+            LIMIT 100
             """)
         songs = connection.execute(sql_query).fetchall()
         print(songs)

@@ -20,6 +20,7 @@ def search_for_playlists(playlist_name: str=''):
             JOIN playlist_follower ON playlist_follower.playlist_id = playlist.playlist_id
             WHERE playlist_name ILIKE :playlist_name
             GROUP BY id, playlist_name
+            ORDER BY followers DESC
             """)
         playlists = connection.execute(sql_query, sql_dict).fetchall()
 
@@ -46,6 +47,7 @@ def search_for_songs(song_name: str = ''):
             LEFT JOIN playlist_song ON playlist_song.song_id = song.song_id
             WHERE song.title ILIKE :song_name
             GROUP BY song.song_id, song.title, album.title, artist.name, duration
+            ORDER BY popularity
             """)
         songs = connection.execute(sql_query, sql_dict).fetchall()
         results = []

@@ -5,6 +5,7 @@ from faker import Faker
 import numpy as np
 import pandas as pd
 import random, time
+import string
 
 def generate_playlist_name():
     """Generates a random playlist name."""
@@ -85,7 +86,9 @@ with engine.begin() as conn:
     DROP TABLE IF EXISTS "playlist_song" CASCADE;
     DROP TABLE IF EXISTS "playlist_collaborator" CASCADE;
     DROP TABLE IF EXISTS "playlist_follower" CASCADE;
-                    
+    DROP TABLE IF EXISTS "song" CASCADE;
+    DROP TABLE IF EXISTS "album" CASCADE;
+    DROP TABLE IF EXISTS "artist" CASCADE;  
     
     CREATE TABLE IF NOT EXISTS
     public.artist (
@@ -198,7 +201,7 @@ with engine.begin() as conn:
 
         song['name'] = song['Song']
         song['album'] = song['spotify_track_album']
-        song['artist'] = song['Performer']
+        song['artist'] = str(song['Performer']).partition(" Featuring")[0]
         song['duration'] = song['spotify_track_duration_ms']//1000
 
         sql_dict_artist = {
