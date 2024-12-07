@@ -1,59 +1,61 @@
-from fastapi import APIRouter
-import spotify_auth
-import requests
-import json
+from fastapi import APIRouter, Response 
+from fastapi.responses import JSONResponse
+import sqlalchemy
+from src import database as db
 
 router = APIRouter(
     prefix="/search",
     tags=['search']
 )
 
-@router.get("/artist/{artist_name}")
-def search_for_artists(artist_name: str = None):
-    token = spotify_auth.get_spotify_token()
-    url = "https://api.spotify.com/v1/search"
-    headers = spotify_auth.get_auth_header(token)
-    query = f"?q={artist_name}&type=artist&limit=5"
+@router.get("/playlists/{name}")
+def search_for_playlists(playlist_name: str=''):
+    with db.engine.begin() as connection:
+        sql_dict = {
+            'playlist_name': playlist_name
+        }
+        sql_query = sqlalchemy.text("""
+            SELECT playlist.playlist_id as id, playlist_name, COUNT(playlist_follower.user_id) as followers
+            FROM playlist
+            JOIN playlist_follower ON playlist_follower.playlist_id = playlist.playlist_id
+            WHERE playlist_name ILIKE :playlist_name
+            GROUP BY id, playlist_name
+            """)
+        playlists = connection.execute(sql_query, sql_dict).fetchall()
 
-    query_url = url + query
-    response = requests.get(query_url, headers=headers)
-    json_result = json.loads(response.content)
-    artist_list = []
-    for artist in json_result['artists']['items']:
-        artist_list.append(
-            {
-                #'id': artist['id'],
-                'name': artist['name'],
-                #'type': artist['type'],
-                'genres': artist['genres'],
-                'popularity': artist['popularity'],
-                'followers': artist['followers']['total']
-            }
-        )
-    return artist_list
+        results = []
+        for playlist in playlists:
+            results.append({
+                'id': playlist.id,
+                'name': playlist.playlist_name,
+                'followers': playlist.followers
+            })
+    return results
 
-@router.get("/song/{name}/{album}/{artist}")
-def search_for_songs(song_name: str = '', album_name: str = '', artist_name: str = ''):
-    token = spotify_auth.get_spotify_token()
-    url = "https://api.spotify.com/v1/search"
-    headers = spotify_auth.get_auth_header(token)
-    query = f"?q={song_name + ' ' + album_name + ' ' + artist_name}&type=track&limit=5"
-
-    query_url = url + query
-    response = requests.get(query_url, headers=headers)
-    json_result = json.loads(response.content)
-    song_list = []
-    for song in json_result['tracks']['items']:
-        song_list.append(
-            {
-                #'id': song['id'],
-                'name': song['name'],
-                #'type': song['type'],
-                #'track': song['track_number'],
-                'album': song['album']['name'],
-                'artist': song['artists'][0]['name'],
-                #'popularity': str(song['popularity']),
-                'duration': str(song['duration_ms']//1000) + 's'
-            }
-        )
-    return song_list
+@router.get("/songs/{name}")
+def search_for_songs(song_name: str = ''):
+    with db.engine.begin() as connection:
+        sql_dict = {
+            'song_name': song_name
+        }
+        sql_query = sqlalchemy.text("""
+            SELECT COALESCE(COUNT(playlist_song.playlist_id), 0) as popularity, song.song_id as id, song.title as song_title, album.title as album_title, artist.name as artist_name, duration
+            FROM song
+            JOIN album ON album.album_id = song.album_id
+            JOIN artist ON artist.artist_id = song.artist_id
+            LEFT JOIN playlist_song ON playlist_song.song_id = song.song_id
+            WHERE song.title ILIKE :song_name
+            GROUP BY song.song_id, song.title, album.title, artist.name, duration
+            """)
+        songs = connection.execute(sql_query, sql_dict).fetchall()
+        results = []
+        for song in songs:
+            results.append({
+                'id': song.id,
+                'popularity': song.popularity,
+                'name': song.song_title,
+                'album': song.album_title,
+                'artist': song.artist_name,
+                'duration': song.duration
+            })
+    return results

@@ -233,7 +233,7 @@ def get_songs(playlist_id: int):
         """)
 
         sql_query_songs = sqlalchemy.text("""
-            SELECT song.title as name
+            SELECT song.song_id as id, song.title as song_name
             FROM playlist_song
             JOIN song ON playlist_song.song_id = song.song_id
             WHERE playlist_song.playlist_id = :playlist_id
@@ -261,14 +261,17 @@ def get_songs(playlist_id: int):
         playlist_name = connection.execute(sql_query_playlist, sql_dict).fetchone()
         owner_name = connection.execute(sql_query_user, sql_dict).fetchone()
 
-    song_dict = {}
+    track_list = []
     for i, song in enumerate(songs):
-        song_dict[str(i + 1)] = song.name
+        track_list.append({
+            "id": song.id,
+            "name": song.song_name
+        })
 
     playlist = {
         'name': playlist_name.playlist_name,
         'created_by': owner_name.name, 
-        'tracks': song_dict
+        'tracks': track_list
     }
     return playlist
 
@@ -280,8 +283,10 @@ def get_song_information(song_id: int):
 
         # get song info for a song id
         sql_query = """
-            SELECT song_id, title, duration
+            SELECT song_id, song.title as song_name, artist.name as artist_name, album.title as album_name, duration
             FROM song
+            JOIN artist ON artist.artist_id = song.artist_id
+            JOIN album ON album.album_id = song.album_id
             WHERE song_id = :song_id
         """
         song_info = connection.execute(sqlalchemy.text(sql_query), {'song_id': song_id}).fetchone()
@@ -293,8 +298,10 @@ def get_song_information(song_id: int):
 
     # format song information
     song_data = {
-        "song_id": song_info.song_id,
-        "song_title": song_info.title,
+        "id": song_info.song_id,
+        "title": song_info.song_name,
+        "artist": song_info.artist_name,
+        "album": song_info.album_name,
         "song_duration": f"{song_info.duration}s"
     }
 

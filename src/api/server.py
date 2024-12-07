@@ -2,7 +2,7 @@ from fastapi import FastAPI, exceptions, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 #add api endpoints here and down there
-from src.api import analytics, search, users, playlists
+from src.api import admin, analytics, search, users, playlists
 import json
 import logging
 from starlette.middleware.cors import CORSMiddleware
@@ -33,7 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#add api points here 
+#add api points here
+app.include_router(admin.router)
 app.include_router(analytics.router)
 app.include_router(search.router)
 app.include_router(users.router)
