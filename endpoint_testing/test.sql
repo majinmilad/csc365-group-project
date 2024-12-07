@@ -127,3 +127,13 @@ COUNT(playlist_song.song_id) OVER (PARTITION BY playlist.playlist_id) as songs F
 JOIN playlist_follower on playlist.playlist_id = playlist_follower.playlist_id
 JOIN playlist_song on playlist.playlist_id = playlist_song.playlist_id
 WHERE playlist.playlist_id = 49148
+
+WITH playlist_stats AS(
+    SELECT playlist.playlist_id, playlist.user_id, 
+    COUNT(playlist_follower.user_id) OVER (PARTITION BY playlist.playlist_id) AS followers,
+    COUNT(playlist_song.song_id) OVER (PARTITION BY playlist.playlist_id) as songs FROM playlist
+    JOIN playlist_follower on playlist.playlist_id = playlist_follower.playlist_id
+    JOIN playlist_song on playlist.playlist_id = playlist_song.playlist_id
+)
+SELECT DISTINCT * FROM playlist_stats
+WHERE followers = songs
