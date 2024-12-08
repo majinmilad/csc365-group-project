@@ -43,8 +43,8 @@ engine = sqlalchemy.create_engine(database_connection_url(), use_insertmanyvalue
 
 def follower_sample_distribution(num_users:int, total_playlists:int):
         # User Engagement
-        gen_user_follows = 5
-        engagement_rate = ((gen_user_follows/total_playlists)**2)*(num_users)
+        avgerage_user_follows = 5
+        engagement_rate = ((avgerage_user_follows/total_playlists)**2)*(num_users)
 
         # Current Top 50
         top_plays = min(10, total_playlists)
@@ -338,9 +338,8 @@ with engine.begin() as conn:
     print("populating playlists...")
     playlist_songs = []
     total_content = 0
-    data = np.random.default_rng().normal(loc=50, scale=20, size=total_playlists) + 5
-    song_count_sample_distribution = data[data>0].astype(int)
-    for i in range(len(song_count_sample_distribution)):
+    song_count_sample_distribution = np.random.poisson(lam=50, size=total_playlists)
+    for i in range(total_playlists):
         num_songs = song_count_sample_distribution[i]
         for j in range(num_songs):
             total_content += 1
@@ -358,7 +357,7 @@ with engine.begin() as conn:
     print("Total playlist contents: ", total_content)
     print("done\n")
     
-    
+    print("Total songs: ", total_songs)
     print("Total users: ", num_users)
     print("Total playlists: ", total_playlists)
     print("Total followers: ", total_followers)
