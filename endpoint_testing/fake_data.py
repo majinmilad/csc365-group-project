@@ -338,7 +338,7 @@ with engine.begin() as conn:
     print("populating playlists...")
     playlist_songs = []
     total_content = 0
-    song_count_sample_distribution = np.random.poisson(lam=50, size=total_playlists)
+    song_count_sample_distribution = np.random.poisson(lam=30, size=total_playlists)
     for i in range(total_playlists):
         num_songs = song_count_sample_distribution[i]
         for j in range(num_songs):
