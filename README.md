@@ -1,4 +1,4 @@
-# csc365-group-project
+# csc365-group-project (Playlist Exchanger)
 Repository for the group project in CSC 365 at Cal Poly  
 
 Members: Jackson McLaughlin, Edson Munoz, Megan Fung and Milad Chabok
