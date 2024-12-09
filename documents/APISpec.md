@@ -126,7 +126,7 @@ GET/admin/{name}/{album}/{artist} -> adds songs to database
     [ {
   "id": string, "name": string, "type": string, "genres": [string], "popularity": int, "followers": int} ]
 
-GET/{user_id}/merge/{playlist_one}{playlist_two} ->
+GET/{user_id}/merge/{playlist_one}{playlist_two} -> merge two playlists into a new playlist
 - Paramters: (user_id, playlist_one_id, playlist_two_id)
 - Response:
     {"new_merged_playlist_id": integer}
