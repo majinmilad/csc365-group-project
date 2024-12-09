@@ -37,19 +37,20 @@ def most_popular_playlists():
 def most_popular_songs():
     with db.engine.begin() as connection:
         sql_query = sqlalchemy.text("""
-            WITH song_count AS
-            (
-                SELECT song_id as id, COUNT(playlist_song.playlist_id) AS saves
-                FROM playlist_song
-                GROUP BY song_id
-                ORDER BY COUNT(playlist_song.playlist_id)
-            )
-            SELECT RANK() OVER (ORDER BY saves DESC, song.title ASC) AS Rnk, song.title AS title, album.title AS album_name, artist.name AS artist_name, id
-            FROM song_count
+            CREATE MATERIALIZED VIEW IF NOT EXISTS song_saves AS
+            SELECT song_id as id, COUNT(playlist_song.playlist_id) AS saves
+            FROM playlist_song
+            GROUP BY song_id
+            ORDER BY COUNT(playlist_song.playlist_id);
+
+            CREATE INDEX IF NOT EXISTS idx_song_saves ON song_saves(saves);
+
+            SELECT RANK() OVER (ORDER BY saves DESC, song.title ASC) AS Rnk, song.title, album.title AS album_name, artist.name AS artist_name, id
+            FROM song_saves
             LEFT JOIN song ON id = song.song_id
             LEFT JOIN artist ON song.artist_id = artist.artist_id
             LEFT JOIN album ON song.album_id = album.album_id
-            LIMIT 100
+            LIMIT 100;
             """)
         songs = connection.execute(sql_query).fetchall()
         print(songs)
