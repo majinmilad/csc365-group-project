@@ -360,16 +360,6 @@ def delete_song_from_playlist(current_user_id: int, playlist_id: int, song_id: i
            'song_id': song_id,
            'playlist_id': playlist_id
         }
-        sql_query_permission = sqlalchemy.text("""
-            SELECT 1
-            FROM playlist
-            JOIN playlist_song ON playlist_song.playlist_id = playlist.playlist_id
-            WHERE user_id = :user_id AND playlist.playlist_id = :playlist_id
-            """)
-        has_permission = connection.execute(sql_query_permission, sql_dict).fetchone()
-
-        if(not(has_permission)):
-            return JSONResponse({"message": "Only owners/collaborators may delete a song"}, status_code=403)
 
         sql_query_exists = sqlalchemy.text("""
             SELECT 1
@@ -383,8 +373,12 @@ def delete_song_from_playlist(current_user_id: int, playlist_id: int, song_id: i
         sql_query_permission = sqlalchemy.text("""
             SELECT 1
             FROM playlist
-            JOIN playlist_song ON playlist_song.playlist_id = playlist.playlist_id
-            WHERE user_id = :user_id AND playlist.playlist_id = :playlist_id AND song_id = :song_id
+            WHERE (:user_id = (SELECT user_id
+                FROM playlist
+                WHERE playlist_id = :playlist_id) 
+                OR :user_id = (SELECT user_id 
+                FROM playlist_collaborator
+                WHERE playlist_id = :playlist_id))
             """)
         has_permission = connection.execute(sql_query_permission, sql_dict).fetchone()
         if(not(has_permission)):
@@ -392,13 +386,7 @@ def delete_song_from_playlist(current_user_id: int, playlist_id: int, song_id: i
 
         sql_query = sqlalchemy.text("""
         DELETE FROM playlist_song
-        WHERE playlist_id = :playlist_id AND song_id = :song_id AND 
-        (:user_id = (SELECT user_id
-                    FROM playlist
-                    WHERE playlist_id = :playlist_id) 
-        OR :user_id = (SELECT user_id 
-                    FROM playlist_collaborator
-                    WHERE playlist_id = :playlist_id))
+        WHERE playlist_id = :playlist_id AND song_id = :song_id
         """)
         connection.execute(sql_query, sql_dict)
     return Response(status_code=204)

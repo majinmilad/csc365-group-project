@@ -67,20 +67,32 @@ All scripts, and files for data generation are located in  [/endpoint_testing](h
 * `DELETE /playlists/{user_id}/playlist/{playlist}/unfollow` (4.763 ms)
 
 ### **Slowest Endpoints**
-1. `DELETE /users/remove` (5453.352 ms)
+1. `DELETE /users/remove` (5453.352 ms)*
 2. `DELETE /playlists/{playlist_id}/songs/{song_id}` (911.373 ms)
 3. `GET /analytics/songs` (576.993 ms)
-4. `POST /admin/song/{name}/{album}/{artist}` (532.491 ms)
+4. `POST /admin/song/{name}/{album}/{artist}` (532.491 ms)*
 5. `GET /search/songs/{name}` (461.761 ms)
 
-## **Endpoint Analysis and Improvement**
-### **1. Delete User Account**
-`DELETE /users/remove` (5453.352 ms)
 
-### **2. Remove Song From Playlist**
-`DELETE /playlists/{playlist_id}/songs/{song_id}` (911.373 ms)
 
-### **3. Top 100 Songs**
+
+---
+
+
+## **Endpoint Optimization**
+
+### **A Note on the DELETE and POST Endpoints**
+    We were unable to optimize 2 of the endpoints in our top 5,
+    or at least not with Indices. These endpoints being Remove User,
+    and Admin Add Song.
+    
+    After running an explain we found that the deleted User_id had to Cascade through the tables. Considering the fact that this user was already leaving our platform and because we didn't know how to make it any faster with indices we did not think it signifcant to improve. 
+    
+    Running an explain on the Admin Add Song SQL Querys showed substainally faster results than what was shown in the endpoint testing. The Curl call
+    times above also include the python code which for Admin Add Song connects
+    to spotify, contributing significantly to it's performance.
+
+## **1. Top 100 Songs**
 #### **Endpoint Query**
     ENDPOINT: 'GET /analytics/songs' (576.993 ms)
 ```sql
@@ -132,9 +144,9 @@ WindowAgg  (cost=60243.33..60245.33 rows=100 width=75) (actual time=462.016..462
                           Index Cond: (artist_id = song.artist_id)
               ->  Index Scan using album_pkey on album  (cost=0.29..0.33 rows=1 width=29) (actual time=0.002..0.002 rows=1 loops=100)
                     Index Cond: (album_id = song.album_id)
-```
     Planning Time: 0.605 ms
     Execution Time: 462.552 ms
+```
 
 #### **Analysis**
 * Artist and Album JOINS already use Indices 
@@ -148,13 +160,6 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS song_saves AS
     GROUP BY song_id
 
 CREATE INDEX IF NOT EXISTS idx_song_saves ON song_saves(saves);
-
-SELECT RANK() OVER (ORDER BY saves DESC, song.title ASC) AS Rnk, song.title, album.title, artist.name, id
-FROM song_saves
-LEFT JOIN song ON id = song.song_id
-LEFT JOIN artist ON song.artist_id = artist.artist_id
-LEFT JOIN album ON song.album_id = album.album_id
-LIMIT 100
 ```
 
 #### **Performance & Justification**
@@ -223,3 +228,245 @@ Execution Time: 2.044 ms
 #### **Improvement**
     Initial Excecution Time: 462.552 ms
     Final Execution Time: 2.044 ms
+  
+## **2. Song Search**
+#### **Endpoint Query**
+    Endpoint: GET /search/songs/{name} (461.761 ms)
+```sql
+EXPLAIN ANALYZE
+SELECT COALESCE(COUNT(playlist_song.playlist_id), 0) as popularity, song.song_id as id, song.title as song_title, album.title as album_title, artist.name as artist_name, duration
+    FROM song
+    JOIN album ON album.album_id = song.album_id
+    JOIN artist ON artist.artist_id = song.artist_id
+    LEFT JOIN playlist_song ON playlist_song.song_id = song.song_id
+    WHERE song.title ILIKE :song_name
+    GROUP BY song.song_id, song.title, album.title, artist.name, duration
+    ORDER BY popularity
+```
+
+#### **Results**
+```sql
+Sort  (cost=76542.45..76543.26 rows=322 width=71) (actual time=602.161..602.164 rows=2 loops=1)
+  Sort Key: (COALESCE(count(playlist_song.playlist_id), '0'::bigint))
+  Sort Method: quicksort  Memory: 25kB
+  ->  GroupAggregate  (cost=76521.79..76529.04 rows=322 width=71) (actual time=602.121..602.158 rows=2 loops=1)
+        Group Key: song.song_id, album.title, artist.name
+        ->  Sort  (cost=76521.79..76522.60 rows=322 width=71) (actual time=602.083..602.098 rows=333 loops=1)
+              Sort Key: song.song_id, album.title, artist.name
+              Sort Method: quicksort  Memory: 65kB
+              ->  Nested Loop  (cost=541.99..76508.38 rows=322 width=71) (actual time=20.668..601.802 rows=333 loops=1)
+                    ->  Nested Loop  (cost=541.69..76475.49 rows=322 width=61) (actual time=20.652..601.582 rows=333 loops=1)
+                          ->  Hash Right Join  (cost=541.40..76442.59 rows=322 width=48) (actual time=20.618..601.172 rows=333 loops=1)
+                                Hash Cond: (playlist_song.song_id = song.song_id)
+                                ->  Seq Scan on playlist_song  (cost=0.00..65926.60 rows=3799160 width=16) (actual time=0.076..251.364 rows=3799160 loops=1)
+                                ->  Hash  (cost=541.38..541.38 rows=2 width=40) (actual time=15.933..15.933 rows=2 loops=1)
+                                      Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                      ->  Seq Scan on song  (cost=0.00..541.38 rows=2 width=40) (actual time=1.594..15.925 rows=2 loops=1)
+                                            Filter: (title ~~* 'california girls'::text)
+                                            Rows Removed by Filter: 23628
+                          ->  Memoize  (cost=0.30..8.31 rows=1 width=29) (actual time=0.001..0.001 rows=1 loops=333)
+                                Cache Key: song.album_id
+                                Cache Mode: logical
+                                Hits: 331  Misses: 2  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                                ->  Index Scan using album_pkey on album  (cost=0.29..8.30 rows=1 width=29) (actual time=0.014..0.015 rows=1 loops=2)
+                                      Index Cond: (album_id = song.album_id)
+                    ->  Memoize  (cost=0.29..8.31 rows=1 width=22) (actual time=0.000..0.000 rows=1 loops=333)
+                          Cache Key: song.artist_id
+                          Cache Mode: logical
+                          Hits: 331  Misses: 2  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                          ->  Index Scan using artist_pkey on artist  (cost=0.28..8.30 rows=1 width=22) (actual time=0.011..0.011 rows=1 loops=2)
+                                Index Cond: (artist_id = song.artist_id)
+Planning Time: 0.940 ms
+Execution Time: 602.263 ms
+```
+#### **Analysis**
+* The JOIN for playlist_song is located within a double nested loop
+* There is a Seq Scan within the JOIN that required song_id
+* There is a Seq Scan also within this loop for song that filters
+every row in that table by title
+
+#### **Optimization**
+```sql
+CREATE INDEX idx_playlist_track ON playlist_song(song_id);
+```
+
+#### **Performance & Justification**
+    song_id is referenced within the nested loops
+    and as such any improvment to song_id calls
+    should significantly impact the time. Title
+    is used in a string comparison and as such when 
+    tested the Index was found to be in effective. 
+
+```sql
+Sort  (cost=1849.30..1850.10 rows=322 width=71) (actual time=21.609..21.613 rows=2 loops=1)
+  Sort Key: (COALESCE(count(playlist_song.playlist_id), '0'::bigint))
+  Sort Method: quicksort  Memory: 25kB
+  ->  GroupAggregate  (cost=1828.64..1835.88 rows=322 width=71) (actual time=21.501..21.591 rows=2 loops=1)
+        Group Key: song.song_id, album.title, artist.name
+        ->  Sort  (cost=1828.64..1829.44 rows=322 width=71) (actual time=21.407..21.444 rows=333 loops=1)
+              Sort Key: song.song_id, album.title, artist.name
+              Sort Method: quicksort  Memory: 65kB
+              ->  Nested Loop Left Join  (cost=6.25..1815.22 rows=322 width=71) (actual time=3.848..21.124 rows=333 loops=1)
+                    ->  Nested Loop  (cost=0.57..574.58 rows=2 width=63) (actual time=3.728..20.198 rows=2 loops=1)
+                          ->  Nested Loop  (cost=0.29..557.98 rows=2 width=53) (actual time=3.685..20.146 rows=2 loops=1)
+                                ->  Seq Scan on song  (cost=0.00..541.38 rows=2 width=40) (actual time=3.624..20.078 rows=2 loops=1)
+                                      Filter: (title ~~* 'california girls'::text)
+                                      Rows Removed by Filter: 23628
+                                ->  Index Scan using album_pkey on album  (cost=0.29..8.30 rows=1 width=29) (actual time=0.027..0.027 rows=1 loops=2)
+                                      Index Cond: (album_id = song.album_id)
+                          ->  Index Scan using artist_pkey on artist  (cost=0.28..8.30 rows=1 width=22) (actual time=0.022..0.022 rows=1 loops=2)
+                                Index Cond: (artist_id = song.artist_id)
+                    ->  Bitmap Heap Scan on playlist_song  (cost=5.69..618.70 rows=162 width=16) (actual time=0.072..0.386 rows=166 loops=2)
+                          Recheck Cond: (song_id = song.song_id)
+                          Heap Blocks: exact=332
+                          ->  Bitmap Index Scan on idx_playlist_track  (cost=0.00..5.64 rows=162 width=0) (actual time=0.032..0.032 rows=166 loops=2)
+                                Index Cond: (song_id = song.song_id)
+Planning Time: 1.488 ms
+Execution Time: 21.784 ms
+```
+
+#### **Improvement**
+    Initial Execution Time: 602.263 ms
+    Final Execution Time: 21.784 ms
+
+## **3. Delete Song From Playlist **
+#### **Endpoint Query**
+    Endpoint: `DELETE /playlists/{playlist_id}/songs/{song_id}` (911.373 ms)
+1. 
+```sql
+EXPLAIN ANALYZE
+SELECT 1
+FROM playlist_song
+WHERE playlist_song.playlist_id = :playlist_id AND playlist_song.song_id = :song_id
+```
+
+2. 
+```sql
+EXPLAIN ANALYZE
+SELECT 1
+FROM playlist
+WHERE (:user_id = (SELECT user_id
+    FROM playlist
+    WHERE playlist_id = :playlist_id) 
+    OR :user_id = (SELECT user_id 
+    FROM playlist_collaborator
+    WHERE playlist_id = :playlist_id))
+```
+
+3. 
+```sql
+EXPLAIN ANALYZE
+DELETE FROM playlist_song
+        WHERE playlist_id = :playlist_id AND song_id = :song_id  
+```
+
+#### **Results**
+1. 
+```sql
+Bitmap Heap Scan on playlist_song  (cost=5.65..619.07 rows=1 width=4) (actual time=0.877..0.879 rows=1 loops=1)
+  Recheck Cond: (song_id = '7079'::bigint)
+  Filter: (playlist_id = '126697'::bigint)
+  Rows Removed by Filter: 152
+  Heap Blocks: exact=151
+  ->  Bitmap Index Scan on idx_playlist_track  (cost=0.00..5.64 rows=162 width=0) (actual time=0.050..0.050 rows=153 loops=1)
+        Index Cond: (song_id = '7079'::bigint)
+Planning Time: 0.337 ms
+Execution Time: 0.906 ms
+```
+
+2. 
+```sql
+Result  (cost=12.62..2495.68 rows=126706 width=4) (actual time=0.109..29.805 rows=126706 loops=1)
+  One-Time Filter: (('4000'::bigint = $0) OR ('4000'::bigint = $1))
+  InitPlan 1 (returns $0)
+    ->  Index Scan using playlist_pkey on playlist playlist_1  (cost=0.29..8.31 rows=1 width=8) (actual time=0.083..0.087 rows=1 loops=1)
+          Index Cond: (playlist_id = '126697'::bigint)
+  InitPlan 2 (returns $1)
+    ->  Index Only Scan using playlist_collaborators_pkey on playlist_collaborator  (cost=0.29..4.30 rows=1 width=8) (never executed)
+          Index Cond: (playlist_id = '126697'::bigint)
+          Heap Fetches: 0
+  ->  Seq Scan on playlist  (cost=0.01..2483.07 rows=126706 width=0) (actual time=0.010..12.790 rows=126706 loops=1)
+Planning Time: 0.203 ms
+Execution Time: 38.128 ms
+```
+
+3. 
+```sql
+Delete on playlist_song  (cost=5.65..619.07 rows=0 width=0) (actual time=0.294..0.295 rows=0 loops=1)
+  ->  Bitmap Heap Scan on playlist_song  (cost=5.65..619.07 rows=1 width=6) (actual time=0.262..0.263 rows=1 loops=1)
+        Recheck Cond: (song_id = '7079'::bigint)
+        Filter: (playlist_id = '126697'::bigint)
+        Rows Removed by Filter: 152
+        Heap Blocks: exact=151
+        ->  Bitmap Index Scan on idx_playlist_track  (cost=0.00..5.64 rows=162 width=0) (actual time=0.030..0.031 rows=153 loops=1)
+              Index Cond: (song_id = '7079'::bigint)
+Planning Time: 0.153 ms
+Execution Time: 0.367 ms
+```
+#### **Analysis**
+* The Delete Song endpoint contains 3 sql calls, the first 2 are error checks, the 3rd deletes the song. 
+* The 1st and 3rd calls benefit from our previous optimization, the idx_playlist_tracks index. 
+
+
+
+#### **Optimization**
+1. 
+```sql
+CREATE INDEX idx_playlist_track ON playlist_song(song_id);
+CREATE INDEX idx_playlist_id ON playlist_song(playlist_id);
+```
+    Our previous optimization to add a playlist_track index continues
+    to help with this endpoint. In addition a playlist_id index also
+    ended up being useful here. However the most significant time was
+    in checking the user's permissions which could not be optimized.
+
+#### **Performance & Justification**
+1. 
+```sql 
+Index Scan using idx_playlist_id on playlist_song  (cost=0.43..9.05 rows=1 width=4) (actual time=0.029..0.036 rows=1 loops=1)
+  Index Cond: (playlist_id = '126697'::bigint)
+  Filter: (song_id = '17337'::bigint)
+  Rows Removed by Filter: 25
+Planning Time: 0.123 ms
+Execution Time: 0.062 ms 
+```
+
+2. 
+```sql
+Result  (cost=12.62..2495.68 rows=126706 width=4) (actual time=0.062..30.060 rows=126706 loops=1)
+  One-Time Filter: (('4000'::bigint = $0) OR ('4000'::bigint = $1))
+  InitPlan 1 (returns $0)
+    ->  Index Scan using playlist_pkey on playlist playlist_1  (cost=0.29..8.31 rows=1 width=8) (actual time=0.042..0.044 rows=1 loops=1)
+          Index Cond: (playlist_id = '126697'::bigint)
+  InitPlan 2 (returns $1)
+    ->  Index Only Scan using playlist_collaborators_pkey on playlist_collaborator  (cost=0.29..4.30 rows=1 width=8) (never executed)
+          Index Cond: (playlist_id = '126697'::bigint)
+          Heap Fetches: 0
+  ->  Seq Scan on playlist  (cost=0.01..2483.07 rows=126706 width=0) (actual time=0.009..12.704 rows=126706 loops=1)
+Planning Time: 0.206 ms
+Execution Time: 38.414 ms
+```
+
+3. 
+```sql
+Delete on playlist_song  (cost=13.04..21.66 rows=0 width=0) (actual time=0.132..0.133 rows=0 loops=1)
+  InitPlan 1 (returns $0)
+    ->  Index Scan using playlist_pkey on playlist  (cost=0.29..8.31 rows=1 width=8) (actual time=0.023..0.025 rows=1 loops=1)
+          Index Cond: (playlist_id = '126697'::bigint)
+  InitPlan 2 (returns $1)
+    ->  Index Only Scan using playlist_collaborators_pkey on playlist_collaborator  (cost=0.29..4.30 rows=1 width=8) (never executed)
+          Index Cond: (playlist_id = '126697'::bigint)
+          Heap Fetches: 0
+  ->  Result  (cost=0.43..9.05 rows=1 width=6) (actual time=0.044..0.050 rows=1 loops=1)
+        One-Time Filter: (('4000'::bigint = $0) OR ('4000'::bigint = $1))
+        ->  Index Scan using idx_playlist_id on playlist_song  (cost=0.43..9.05 rows=1 width=6) (actual time=0.013..0.018 rows=1 loops=1)
+              Index Cond: (playlist_id = '126697'::bigint)
+              Filter: (song_id = '17337'::bigint)
+              Rows Removed by Filter: 25
+Planning Time: 0.214 ms
+Execution Time: 0.179 ms
+```
+
+#### **Improvement**
+    Initial Execution Time(Sum): 39.401
+    Final Execution Time(Sum): 38.655
